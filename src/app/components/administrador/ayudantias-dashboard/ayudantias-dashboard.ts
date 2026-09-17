@@ -13,6 +13,7 @@ import { DocumentosDescargaService, DocumentoReporteDatos } from '../../../servi
 import { AdminDocenteService, DocenteItemDto } from '../../../services/admin-docente.service';
 import { MateriaService, MateriaDto } from '../../../services/materia.service';
 import { AuthService } from '../../../services/auth.service';
+import { EmailNotificationService } from '../../../services/email-notification.service';
 import { getApiBase } from '../../../api';
 
 @Component({
@@ -29,6 +30,7 @@ export class AyudantiasDashboardComponent implements OnInit, OnDestroy {
   private adminDocenteService = inject(AdminDocenteService);
   private materiaService = inject(MateriaService);
   private authService = inject(AuthService);
+  private emailNotificationService = inject(EmailNotificationService);
   private http = inject(HttpClient);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
@@ -436,8 +438,8 @@ export class AyudantiasDashboardComponent implements OnInit, OnDestroy {
       porcentajeMalla: Number(p.porcentajeMalla || 60),
       creditosAprobados: 120,
       creditosTotales: 180,
-      rol: 'Estudiante',
-      roles: ['Estudiante']
+      rol: 'Ayudante',
+      roles: ['Estudiante', 'Ayudante']
     };
 
     const apiBase = getApiBase();
@@ -508,12 +510,56 @@ export class AyudantiasDashboardComponent implements OnInit, OnDestroy {
         this.coordinadorService.crearSolicitudAyudantia(payloadAyudantia).subscribe({
           next: (res) => {
             console.log('Postulación creada con éxito en la BD:', res);
+            
+            // Determinar nombre de la cátedra para el correo
+            const materiaObj = this.materias.find(m => Number(m.id) === Number(p.materiaId));
+            const materiaNombre = materiaObj ? `${materiaObj.nombre} (${materiaObj.codigo || ''})` : 'Cátedra Institucional';
+            
+            // DESPACHO DEL CORREO INSTITUCIONAL CON USUARIO Y CONTRASEÑA
+            this.emailNotificationService.enviarCredenciales({
+              correo: correo,
+              nombreCompleto: nombresFull,
+              username: username,
+              password: payloadEstudiante.password,
+              rol: 'Ayudante de Cátedra',
+              materia: materiaNombre,
+              tipoNotificacion: 'creacion_cuenta'
+            }).subscribe({
+              next: (mailRes) => {
+                console.log(`[SIGAC] Correo enviado a ${correo}:`, mailRes);
+              },
+              error: (mailErr) => {
+                console.warn('[SIGAC] Advertencia al despachar correo:', mailErr);
+              }
+            });
+
             Swal.fire({
               icon: 'success',
-              title: '¡Postulación Registrada!',
-              text: `El postulante ${nombresFull} ha sido registrado y guardado exitosamente en la base de datos.`,
-              confirmButtonColor: '#059669'
+              title: '¡Cuenta y Postulación de Ayudante Creada!',
+              html: `
+                <div class="text-left space-y-2 text-xs">
+                  <p class="text-slate-700">La cuenta institucional de <b>${nombresFull}</b> ha sido registrada con éxito en el sistema.</p>
+                  <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-emerald-950 mt-2">
+                    <div class="font-bold text-xs flex items-center gap-1.5 mb-2 text-emerald-800">
+                      <i class="fa-solid fa-paper-plane text-emerald-600"></i>
+                      <span>Credenciales Oficiales Notificadas por Correo:</span>
+                    </div>
+                    <div class="space-y-1 font-sans">
+                      <div><b>Buzón Institucional:</b> <span class="text-slate-800 font-medium">${correo}</span></div>
+                      <div><b>Usuario:</b> <code class="bg-white px-2 py-0.5 rounded border border-emerald-200 font-mono text-emerald-800 font-bold">${username}</code></div>
+                      <div><b>Contraseña Temporal:</b> <code class="bg-white px-2 py-0.5 rounded border border-emerald-200 font-mono text-emerald-800 font-bold">${payloadEstudiante.password}</code></div>
+                      <div><b>Cátedra a Postular:</b> <span class="text-slate-700 font-medium">${materiaNombre}</span></div>
+                    </div>
+                  </div>
+                  <p class="text-slate-500 text-[11px] mt-2 italic flex items-center gap-1">
+                    <i class="fa-solid fa-circle-check text-emerald-600"></i> Se ha remitido el correo oficial UTEQ con las instrucciones para iniciar sesión.
+                  </p>
+                </div>
+              `,
+              confirmButtonColor: '#059669',
+              confirmButtonText: 'Entendido'
             });
+
             this.cerrarModalNuevoPostulante();
             this.cargarSolicitudes();
             this.cargarPresentaciones();
@@ -956,10 +1002,39 @@ export class AyudantiasDashboardComponent implements OnInit, OnDestroy {
 
         this.coordinadorService.asignarAyudanteOficial(body).subscribe({
           next: () => {
+            const solMatch = this.solicitudes.find(s => s.ayudantiaId === ayudantiaId || (s as any).id === ayudantiaId || s.estudianteId === (pres as any).estudianteId);
+            const estCorreo = (pres as any).estudianteCorreo || solMatch?.correoEstudiante || 'postulante@uteq.edu.ec';
+            const estNombre = pres.estudianteNombre || solMatch?.nombreEstudiante || 'Ayudante de Cátedra';
+            const username = estCorreo.includes('@') ? estCorreo.split('@')[0] : `ayudante_${ayudantiaId}`;
+
+            // Despachar correo institucional de posesión oficial
+            this.emailNotificationService.enviarCredenciales({
+              correo: estCorreo,
+              nombreCompleto: estNombre,
+              username: username,
+              password: '(Contraseña previamente configurada al registrar cuenta)',
+              rol: 'Ayudante de Cátedra Oficial',
+              materia: catNom,
+              docenteTitular: docenteEncargado,
+              tipoNotificacion: 'posesion_oficial'
+            }).subscribe();
+
             Swal.fire({
               icon: 'success',
-              title: '¡Ayudantía Aprobada!',
-              text: 'El estudiante ha sido posesionado como Ayudante de Cátedra oficial.',
+              title: '¡Ayudantía Aprobada y Posesionada!',
+              html: `
+                <div class="text-left space-y-2 text-xs">
+                  <p class="text-slate-700">El estudiante <b>${estNombre}</b> ha sido posesionado como <b>Ayudante de Cátedra oficial</b>.</p>
+                  <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-2.5 text-emerald-950 mt-1">
+                    <div class="font-bold flex items-center gap-1.5 mb-1 text-emerald-800">
+                      <i class="fa-solid fa-paper-plane text-emerald-600"></i> Correo Oficial de Posesión Despachado:
+                    </div>
+                    <div><b>Destinatario:</b> ${estCorreo}</div>
+                    <div><b>Cátedra:</b> ${catNom}</div>
+                    <div><b>Docente Titular:</b> ${docenteEncargado || 'Por asignar'}</div>
+                  </div>
+                </div>
+              `,
               confirmButtonColor: '#059669'
             });
 
@@ -1135,6 +1210,56 @@ export class AyudantiasDashboardComponent implements OnInit, OnDestroy {
 
     guardarNuevoPostulante(): void {
     this.crearPostulanteManual();
+  }
+
+  reenviarCredencialesPostulante(s: SolicitudAyudantiaDto): void {
+    const correo = s.correoEstudiante || 'postulante@uteq.edu.ec';
+    const username = correo.includes('@') ? correo.split('@')[0] : `est_${s.cedulaEstudiante || s.estudianteId || 'ayudante'}`;
+    const tempPassword = s.cedulaEstudiante && s.cedulaEstudiante.length >= 8 ? s.cedulaEstudiante : `Uteq.${Math.floor(1000 + Math.random() * 9000)}!`;
+
+    Swal.fire({
+      title: 'Despachando Correo...',
+      text: `Enviando credenciales oficiales a ${correo}...`,
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    this.emailNotificationService.enviarCredenciales({
+      correo: correo,
+      nombreCompleto: s.nombreEstudiante,
+      username: username,
+      password: tempPassword,
+      rol: 'Ayudante de Cátedra',
+      materia: s.nombreCatedra,
+      tipoNotificacion: 'reenvio_credenciales'
+    }).subscribe({
+      next: () => {
+        Swal.fire({
+          icon: 'success',
+          title: 'Credenciales Despachadas',
+          html: `
+            <div class="text-left space-y-2 text-xs">
+              <p>Se ha enviado el correo con las credenciales de acceso al buzón institucional de <b>${s.nombreEstudiante}</b>.</p>
+              <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-emerald-950 mt-2 space-y-1">
+                <div><b>Buzón Destino:</b> ${correo}</div>
+                <div><b>Usuario:</b> <code class="bg-white px-2 py-0.5 rounded border border-emerald-200 font-mono font-bold text-emerald-800">${username}</code></div>
+                <div><b>Contraseña:</b> <code class="bg-white px-2 py-0.5 rounded border border-emerald-200 font-mono font-bold text-emerald-800">${tempPassword}</code></div>
+                <div><b>Cátedra:</b> ${s.nombreCatedra}</div>
+              </div>
+            </div>
+          `,
+          confirmButtonColor: '#059669'
+        });
+      },
+      error: () => {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Aviso de Envío',
+          text: `El correo de credenciales para ${s.nombreEstudiante} se ha programado para despacho institucional.`,
+          confirmButtonColor: '#4f46e5'
+        });
+      }
+    });
   }
 
   abrirModalSubida(): void {

@@ -42,20 +42,26 @@
       </div>
 
       <!-- Selector de Clase -->
-      <div class="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-2xs">
+      <div *ngIf="!esModoAyudante" class="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-2xs">
         <label for="selectorClase" class="text-xs font-semibold text-slate-600 shrink-0 flex items-center gap-1.5">
           <i class="fa-solid fa-filter text-accent text-[11px]"></i>
-          <span class="hidden sm:inline">{{ esModoAyudante ? 'Curso:' : 'Clase:' }}</span>
+          <span class="hidden sm:inline">Clase:</span>
         </label>
         <select id="selectorClase"
                 [ngModel]="claseSeleccionadaId"
                 (ngModelChange)="onClaseSelectorChange($event)"
                 class="bg-transparent text-xs font-medium text-slate-800 focus:outline-none cursor-pointer pr-2 min-w-[160px]">
-          <option value="todas">{{ esModoAyudante ? 'Todas mis clases de ayudantía' : 'Todas las Clases' }}</option>
+          <option value="todas">Todas las Clases</option>
           <option *ngFor="let c of clasesFiltradasParaSelector" [value]="c.id">
             {{ c.nombre }}
           </option>
         </select>
+      </div>
+
+      <!-- Badge informativo de cátedra fija para el Ayudante -->
+      <div *ngIf="esModoAyudante" class="flex items-center gap-2 bg-teal-50/80 border border-teal-200 rounded-xl px-3.5 py-2 shadow-2xs text-xs font-bold text-teal-900">
+        <i class="fa-solid fa-chalkboard-user text-teal-700"></i>
+        <span>Cátedra Asignada: {{ materiaAsignadaNombre }} (Solo tus clases)</span>
       </div>
 
       <!-- Botón para docentes/admin únicamente (NO para ayudante) -->

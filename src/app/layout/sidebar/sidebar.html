@@ -24,7 +24,7 @@
         <i class="fa-solid fa-chart-pie text-sm w-5 text-center"></i>
         <span>Dashboard</span>
       </a>
-      <a routerLink="/horarios"
+      <a [routerLink]="esAyudanteRol() ? '/ayudante/horarios' : '/horarios'"
          routerLinkActive="bg-accent/10 text-accent font-semibold"
          class="flex items-center gap-3 px-3 py-2 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors text-xs font-medium">
         <i class="fa-regular fa-clock text-sm w-5 text-center"></i>
@@ -195,6 +195,18 @@
              class="flex items-center gap-3 px-3 py-2 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors text-xs font-medium">
             <i class="fa-solid fa-book-open text-sm w-5 text-center text-teal-600"></i>
             <span>Mi Cátedra Asignada</span>
+          </a>
+          <a routerLink="/ayudante/horarios"
+             routerLinkActive="bg-accent/10 text-accent font-semibold"
+             class="flex items-center gap-3 px-3 py-2 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors text-xs font-medium">
+            <i class="fa-solid fa-calendar-day text-sm w-5 text-center text-teal-600"></i>
+            <span>Horario de mi Cátedra</span>
+          </a>
+          <a routerLink="/ayudante/mi-perfil"
+             routerLinkActive="bg-accent/10 text-accent font-semibold"
+             class="flex items-center gap-3 px-3 py-2 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors text-xs font-medium">
+            <i class="fa-solid fa-id-badge text-sm w-5 text-center text-teal-600"></i>
+            <span>Mi Perfil de Ayudante</span>
           </a>
           <a routerLink="/ayudante/bitacoras"
              routerLinkActive="bg-accent/10 text-accent font-semibold"

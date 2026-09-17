@@ -234,6 +234,11 @@
               </td>
               <td class="py-3.5 px-4 text-right">
                 <div class="flex items-center justify-end gap-2">
+                  <button type="button" (click)="reenviarCredencialesPostulante(s)"
+                          class="p-1.5 bg-slate-100 hover:bg-emerald-50 text-slate-500 hover:text-emerald-700 border border-slate-200 rounded-lg text-xs transition-colors inline-flex items-center cursor-pointer"
+                          title="Enviar credenciales (usuario y contraseña) por correo institucional">
+                    <i class="fa-solid fa-paper-plane text-emerald-600"></i>
+                  </button>
                   <button type="button" (click)="rechazarSolicitudPostulante(s)"
                           class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-semibold rounded-lg text-xs transition-colors inline-flex items-center gap-1 cursor-pointer"
                           title="No Aprobar / Rechazar Postulación">
@@ -563,6 +568,15 @@
             <span class="text-[10px] text-slate-400 mt-0.5 block">Mín. 8.5 / 10</span>
           </div>
         </div>
+
+        <!-- Aviso institucional de notificación de credenciales por correo -->
+        <div class="bg-indigo-50 border border-indigo-200 text-indigo-900 rounded-xl p-3 text-xs flex items-start gap-2.5">
+          <i class="fa-solid fa-envelope-circle-check text-indigo-600 text-sm mt-0.5 shrink-0"></i>
+          <div>
+            <span class="font-bold block">Despacho Automático de Credenciales:</span>
+            <p class="text-[11px] text-indigo-800 mt-0.5 leading-relaxed">Al registrar, el sistema creará la cuenta institucional del ayudante y despachará de inmediato un correo oficial a su buzón institucional con su nombre de usuario y contraseña temporal.</p>
+          </div>
+        </div>
       </div>
 
       <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
@@ -572,8 +586,8 @@
         </button>
         <button (click)="guardarNuevoPostulante()"
                 class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-sm cursor-pointer flex items-center gap-1.5">
-          <i class="fa-solid fa-check"></i>
-          <span>Registrar y Postular</span>
+          <i class="fa-solid fa-paper-plane"></i>
+          <span>Crear Cuenta y Notificar por Correo</span>
         </button>
       </div>
     </div>

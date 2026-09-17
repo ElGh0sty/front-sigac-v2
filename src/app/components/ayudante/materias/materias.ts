@@ -40,33 +40,39 @@ export interface SesionHorarioAyudante {
 })
 export class AyudanteMateriasComponent implements OnInit, OnDestroy {
   // Pestañas
-  tabActiva: 'catedra' | 'horario' | 'silabo' | 'asistencia' | 'recursos' | 'bitacoras' = 'catedra';
+  tabActiva: 'catedra' | 'temas' | 'horario' | 'silabo' | 'asistencia' | 'recursos' | 'bitacoras' = 'catedra';
 
   // Datos de materias
   materias: MateriaDto[] = [];
   materiaSeleccionadaId: number = 101;
   materiaSeleccionada?: MateriaDto;
 
+  // Temas y Unidades de la Cátedra (Gestión Completa)
+  temas: string[] = [];
+  indiceTemaActual: number = 0;
+  modalNuevoTema = false;
+  nuevoTemaNombre: string = '';
+
   // Horario del Ayudante (donde él debe impartir clases/ayudantía)
   horariosAyudantia: SesionHorarioAyudante[] = [
     {
       id: 1,
       dia: 'Lunes',
-      horaInicio: '14:00',
-      horaFin: '16:00',
+      horaInicio: '10:00',
+      horaFin: '12:00',
       tipo: 'Práctica / Taller Presencial',
-      aula: 'Edificio de Aulas B - Aula 204 (Campus Matriz)',
-      temaPrevisto: 'Taller de Derivadas Parciales y Modelado Físico'
+      aula: 'Laboratorio de Cómputo #2 - Campus Central',
+      temaPrevisto: 'Taller de Derivadas y Aplicaciones Prácticas'
     },
     {
       id: 2,
       dia: 'Jueves',
-      horaInicio: '16:00',
-      horaFin: '18:00',
+      horaInicio: '11:00',
+      horaFin: '12:00',
       tipo: 'Tutoría / Refuerzo Virtual',
       aula: 'Sala Virtual Teams / Google Meet',
       enlaceVirtual: 'https://meet.google.com/uteq-ayudantia-calc',
-      temaPrevisto: 'Resolución de Dudas y Guía de Taller Grupal'
+      temaPrevisto: 'Resolución de Dudas y Asesoría Grupal'
     }
   ];
 
@@ -86,7 +92,8 @@ export class AyudanteMateriasComponent implements OnInit, OnDestroy {
     url: '',
     descripcion: '',
     esEsencial: true,
-    linksString: ''
+    linksString: '',
+    tema: ''
   };
 
   // Formulario nueva actividad
@@ -96,7 +103,8 @@ export class AyudanteMateriasComponent implements OnInit, OnDestroy {
     tipo: 'Taller',
     fechaEntrega: '',
     descripcion: '',
-    ponderacion: 10
+    ponderacion: 10,
+    tema: ''
   };
 
   // Asistencia (optimizada para 20+ estudiantes)
@@ -282,6 +290,7 @@ export class AyudanteMateriasComponent implements OnInit, OnDestroy {
     // Carga en vivo: llamar a materiaService.getRecursos y getActividades directamente desde la API
     this.cargarRecursosEnVivo();
     this.cargarActividadesEnVivo();
+    this.cargarTemas();
 
     // Cargar asistencias
     const todasAsist: RegistroAsistenciaDto[] = this.materiaService.getAsistenciasSnapshot();
@@ -292,6 +301,70 @@ export class AyudanteMateriasComponent implements OnInit, OnDestroy {
 
     // Cargar sílabo
     this.cargarSilabo();
+  }
+
+  // ==================== GESTIÓN DE TEMAS ====================\n
+  cargarTemas(): void {
+    if (!this.materiaSeleccionadaId) return;
+    this.materiaService.cargarTemasByMateria(this.materiaSeleccionadaId).subscribe({
+      next: (res) => {
+        if (Array.isArray(res) && res.length > 0) {
+          this.temas = res;
+        } else {
+          // Temas por defecto si no están definidos aún
+          this.temas = [
+            'Unidad 1: Fundamentos teóricos, modelos y análisis inicial',
+            'Unidad 2: Talleres prácticos y resolución de casos de estudio',
+            'Unidad 3: Preparación para evaluaciones formativas y refuerzo'
+          ];
+        }
+        if (this.indiceTemaActual >= this.temas.length) {
+          this.indiceTemaActual = 0;
+        }
+      },
+      error: () => {
+        this.temas = [
+          'Unidad 1: Fundamentos teóricos, modelos y análisis inicial',
+          'Unidad 2: Talleres prácticos y resolución de casos de estudio',
+          'Unidad 3: Preparación para evaluaciones formativas y refuerzo'
+        ];
+      }
+    });
+  }
+
+  agregarNuevoTema(): void {
+    if (!this.nuevoTemaNombre.trim()) {
+      this.mostrarMensajeError('Por favor ingresa un título descriptivo para el tema.');
+      return;
+    }
+    const nombre = this.nuevoTemaNombre.trim();
+    this.temas = this.materiaService.addTemaToMateria(this.materiaSeleccionadaId, nombre);
+    this.mostrarMensajeExito(`Tema "${nombre}" añadido exitosamente a la cátedra.`);
+    this.nuevoTemaNombre = '';
+    this.modalNuevoTema = false;
+    this.indiceTemaActual = this.temas.length - 1;
+  }
+
+  eliminarTema(index: number): void {
+    const tema = this.temas[index];
+    if (!tema) return;
+    if (confirm(`¿Estás seguro de eliminar el tema "${tema}"?`)) {
+      this.temas.splice(index, 1);
+      const key = `sigac_temas_v2_${this.materiaSeleccionadaId}`;
+      localStorage.setItem(key, JSON.stringify(this.temas));
+      if (this.indiceTemaActual >= this.temas.length) {
+        this.indiceTemaActual = Math.max(0, this.temas.length - 1);
+      }
+      this.mostrarMensajeExito('Tema removido de la planificación.');
+    }
+  }
+
+  seleccionarTema(index: number): void {
+    this.indiceTemaActual = index;
+  }
+
+  get temaActual(): string {
+    return this.temas[this.indiceTemaActual] || 'Tema General';
   }
 
   cargarRecursosEnVivo(): void {
@@ -320,8 +393,26 @@ export class AyudanteMateriasComponent implements OnInit, OnDestroy {
     });
   }
 
-  cambiarTab(tab: 'catedra' | 'horario' | 'silabo' | 'asistencia' | 'recursos' | 'bitacoras') {
+  cambiarTab(tab: 'catedra' | 'temas' | 'horario' | 'silabo' | 'asistencia' | 'recursos' | 'bitacoras') {
     this.tabActiva = tab;
+  }
+
+  eliminarRecurso(id?: number): void {
+    if (!id) return;
+    if (confirm('¿Deseas eliminar este recurso pedagógico?')) {
+      this.materiaService.deleteRecurso(id);
+      this.recursosMateria = this.recursosMateria.filter(r => r.id !== id);
+      this.mostrarMensajeExito('Recurso didáctico eliminado con éxito.');
+    }
+  }
+
+  eliminarActividad(id?: number): void {
+    if (!id) return;
+    if (confirm('¿Deseas eliminar esta actividad formativa?')) {
+      this.materiaService.deleteActividad(id);
+      this.actividadesMateria = this.actividadesMateria.filter(a => a.id !== id);
+      this.mostrarMensajeExito('Actividad evaluativa eliminada con éxito.');
+    }
   }
 
   // ==================== CALIFICACIÓN DIRECTA ====================\n
@@ -594,7 +685,8 @@ export class AyudanteMateriasComponent implements OnInit, OnDestroy {
       url: '',
       descripcion: '',
       esEsencial: true,
-      linksString: ''
+      linksString: '',
+      tema: ''
     };
     this.archivoRecurso = null;
     this.archivoRecursoRaw = null;
@@ -611,9 +703,13 @@ export class AyudanteMateriasComponent implements OnInit, OnDestroy {
       return;
     }
 
+    const descripcionFinal = this.nuevaActividad.tema 
+      ? `[${this.nuevaActividad.tema}] ${this.nuevaActividad.descripcion?.trim() || 'Actividad práctica para evaluar el progreso formativo.'}`
+      : (this.nuevaActividad.descripcion?.trim() || 'Actividad práctica para evaluar el progreso formativo.');
+
     const dto: CreateActividadDto = {
       titulo: this.nuevaActividad.titulo.trim(),
-      descripcion: this.nuevaActividad.descripcion?.trim() || 'Actividad práctica para evaluar el progreso formativo.',
+      descripcion: descripcionFinal,
       tipo: this.nuevaActividad.tipo || 'Taller',
       fechaEntrega: this.nuevaActividad.fechaEntrega,
       puntajeMaximo: Number(this.nuevaActividad.ponderacion) || 10
@@ -641,7 +737,8 @@ export class AyudanteMateriasComponent implements OnInit, OnDestroy {
       tipo: 'Taller',
       fechaEntrega: '',
       descripcion: '',
-      ponderacion: 10
+      ponderacion: 10,
+      tema: ''
     };
     this.archivoActividad = null;
   }

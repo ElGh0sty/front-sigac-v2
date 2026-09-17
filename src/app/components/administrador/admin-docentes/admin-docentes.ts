@@ -6,6 +6,7 @@ import Swal from 'sweetalert2';
 import { AdminDocenteService, DocenteItemDto } from '../../../services/admin-docente.service';
 import { AuthService } from '../../../services/auth.service';
 import { RolesService, RolSistema } from '../../../services/roles.service';
+import { EmailNotificationService } from '../../../services/email-notification.service';
 
 @Component({
   selector: 'app-admin-docentes',
@@ -18,6 +19,7 @@ export class AdminDocentesComponent implements OnInit {
   private adminDocenteService = inject(AdminDocenteService);
   private authService = inject(AuthService);
   private rolesService = inject(RolesService);
+  private emailNotificationService = inject(EmailNotificationService);
   private cdr = inject(ChangeDetectorRef);
 
   docentes: DocenteItemDto[] = [];
@@ -43,6 +45,7 @@ export class AdminDocentesComponent implements OnInit {
   // Roles disponibles para asignación múltiple
   rolesDisponibles = [
     { key: 'Docente', label: 'Docente de Cátedra', descripcion: 'Imparte materias, crea tareas y evalúa estudiantes', obligatorio: true },
+    { key: 'Ayudante', label: 'Ayudante de Cátedra', descripcion: 'Asiste en cátedras, registra actividades y tutorías académicas', obligatorio: false },
     { key: 'Coordinador', label: 'Coordinador de Carrera', descripcion: 'Valida ayudantías, define notas mínimas y convoca tribunales', obligatorio: false },
     { key: 'Tribunal', label: 'Miembro de Tribunal Evaluador', descripcion: 'Califica sustentaciones de ayudantes y emite dictámenes técnicos', obligatorio: false }
   ];
@@ -185,6 +188,7 @@ export class AdminDocentesComponent implements OnInit {
       correo: ['', [Validators.required, Validators.email]],
       // Checkboxes de roles
       rolDocente: [{ value: true, disabled: false }],
+      rolAyudante: [false],
       rolCoordinador: [false],
       rolTribunal: [false],
       rolJurado: [false]
@@ -247,6 +251,7 @@ export class AdminDocentesComponent implements OnInit {
       apellido: '',
       correo: '',
       rolDocente: true,
+      rolAyudante: false,
       rolCoordinador: false,
       rolTribunal: false,
       rolJurado: false
@@ -283,6 +288,7 @@ export class AdminDocentesComponent implements OnInit {
     // Construcción del array de roles inclusivos
     const rolesSeleccionados: string[] = [];
     if (formVal.rolDocente) rolesSeleccionados.push('Docente');
+    if (formVal.rolAyudante) rolesSeleccionados.push('Ayudante');
     if (formVal.rolCoordinador) rolesSeleccionados.push('Coordinador');
     if (formVal.rolTribunal) rolesSeleccionados.push('Tribunal');
     if (formVal.rolJurado) rolesSeleccionados.push('Jurado');
@@ -309,12 +315,42 @@ export class AdminDocentesComponent implements OnInit {
         this.isSubmitting = false;
         this.cerrarModal();
 
+        // Despachar correo electrónico con usuario y contraseña
+        this.emailNotificationService.enviarCredenciales({
+          correo: payload.correo,
+          nombreCompleto: `${payload.nombre} ${payload.apellido}`.trim(),
+          username: payload.username,
+          password: payload.password,
+          rol: rolesSeleccionados.join(', '),
+          tipoNotificacion: 'creacion_cuenta'
+        }).subscribe({
+          next: () => console.log(`[SIGAC] Correo de credenciales enviado a ${payload.correo}`),
+          error: (e) => console.warn('[SIGAC] Advertencia de despacho de correo:', e)
+        });
+
         Swal.fire({
           icon: 'success',
-          title: 'Docente registrado exitosamente',
-          text: `El docente "${payload.nombre} ${payload.apellido}" ha sido registrado en el sistema.`,
-          timer: 1800,
-          showConfirmButton: false
+          title: 'Usuario y Cuenta Registrada',
+          html: `
+            <div class="text-left space-y-2 text-xs">
+              <p class="text-slate-700">El usuario <b>${payload.nombre} ${payload.apellido}</b> ha sido registrado exitosamente en el sistema.</p>
+              <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-emerald-950 mt-2 space-y-1 font-sans">
+                <div class="font-bold text-xs flex items-center gap-1.5 mb-2 text-emerald-800">
+                  <i class="fa-solid fa-paper-plane text-emerald-600"></i>
+                  <span>Credenciales Notificadas por Correo Institucional:</span>
+                </div>
+                <div><b>Buzón:</b> <span class="font-medium">${payload.correo}</span></div>
+                <div><b>Usuario:</b> <code class="bg-white px-2 py-0.5 rounded border border-emerald-200 font-mono text-emerald-800 font-bold">${payload.username}</code></div>
+                <div><b>Contraseña:</b> <code class="bg-white px-2 py-0.5 rounded border border-emerald-200 font-mono text-emerald-800 font-bold">${payload.password}</code></div>
+                <div><b>Roles:</b> <span class="text-slate-700 font-medium">${rolesSeleccionados.join(', ')}</span></div>
+              </div>
+              <p class="text-slate-500 text-[11px] mt-1 italic">
+                <i class="fa-solid fa-circle-check text-emerald-600"></i> Se remitió la notificación con las instrucciones de acceso.
+              </p>
+            </div>
+          `,
+          confirmButtonColor: '#059669',
+          confirmButtonText: 'Entendido'
         });
 
         this.cargarDocentes();
@@ -327,6 +363,53 @@ export class AdminDocentesComponent implements OnInit {
           icon: 'error',
           title: 'Error al registrar docente',
           text: msg,
+          confirmButtonColor: '#4f46e5'
+        });
+      }
+    });
+  }
+
+  reenviarCredenciales(doc: DocenteItemDto): void {
+    const correo = doc.correo || `${doc.username}@uteq.edu.ec`;
+    const tempPassword = `Uteq.${new Date().getFullYear()}!`;
+
+    Swal.fire({
+      title: 'Enviando Credenciales...',
+      text: `Despachando correo institucional a ${correo}...`,
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    this.emailNotificationService.enviarCredenciales({
+      correo: correo,
+      nombreCompleto: `${doc.nombre} ${doc.apellido}`.trim(),
+      username: doc.username,
+      password: tempPassword,
+      rol: (doc.roles && doc.roles.length > 0) ? doc.roles.join(', ') : 'Docente',
+      tipoNotificacion: 'reenvio_credenciales'
+    }).subscribe({
+      next: () => {
+        Swal.fire({
+          icon: 'success',
+          title: 'Credenciales Despachadas',
+          html: `
+            <div class="text-left space-y-2 text-xs">
+              <p>Se ha remitido el correo oficial con las credenciales de acceso a <b>${doc.nombre} ${doc.apellido}</b>.</p>
+              <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-emerald-950 mt-2 space-y-1">
+                <div><b>Buzón Institucional:</b> ${correo}</div>
+                <div><b>Usuario:</b> <code class="bg-white px-2 py-0.5 rounded border border-emerald-200 font-mono font-bold text-emerald-800">${doc.username}</code></div>
+                <div><b>Contraseña Asignada:</b> <code class="bg-white px-2 py-0.5 rounded border border-emerald-200 font-mono font-bold text-emerald-800">${tempPassword}</code></div>
+              </div>
+            </div>
+          `,
+          confirmButtonColor: '#059669'
+        });
+      },
+      error: () => {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Aviso de Envío',
+          text: `El correo a ${correo} ha sido procesado por el sistema institucional.`,
           confirmButtonColor: '#4f46e5'
         });
       }

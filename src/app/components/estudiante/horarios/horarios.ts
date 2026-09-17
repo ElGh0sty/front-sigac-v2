@@ -5,6 +5,7 @@ import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { ClaseService, ClaseDto } from '../../../services/clase.service';
 import { MateriaService, MateriaDto } from '../../../services/materia.service';
+import { AuthService } from '../../../services/auth.service';
 
 export interface HorarioItem {
   id?: number;
@@ -31,7 +32,8 @@ export class HorariosComponent implements OnInit, OnDestroy {
 
   get esModoAyudante(): boolean {
     const rol = (localStorage.getItem('rol') || this.rol || '').trim().toLowerCase();
-    return rol === 'ayudante' || this.router.url.includes('/ayudante');
+    const hasAuthRole = this.authService.hasRole('Ayudante') || this.authService.hasRole('AYUDANTE');
+    return rol === 'ayudante' || this.router.url.includes('/ayudante') || hasAuthRole;
   }
 
   get esDocenteOAdmin(): boolean {
@@ -39,8 +41,12 @@ export class HorariosComponent implements OnInit, OnDestroy {
     return rol === 'docente' || rol === 'administrador';
   }
 
+  materiaAsignadaNombre: string = 'Cálculo Avanzado';
+  docenteAsignadoNombre: string = 'Dra. Evelyn Vance';
+  grupoAsignado: string = 'Grupo A - Diurno';
+
   get nombreCursoAsignado(): string {
-    return 'Ingeniería de Software 2026-2 (Cálculo Avanzado - Grupo A)';
+    return `${this.materiaAsignadaNombre} (${this.grupoAsignado} · Docente: ${this.docenteAsignadoNombre})`;
   }
 
   dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
@@ -115,10 +121,14 @@ export class HorariosComponent implements OnInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     private claseService: ClaseService,
-    private materiaService: MateriaService
+    private materiaService: MateriaService,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
+    // 0. Sincronizar cátedra asignada al ayudante si aplica
+    this.sincronizarCatedraAyudante();
+
     // 1. Cargar clases del servicio
     this.subs.push(
       this.claseService.clases$.subscribe(clases => {
@@ -129,14 +139,26 @@ export class HorariosComponent implements OnInit, OnDestroy {
             materia: c.descripcion || c.nombre
           }));
         }
-        // Verificar si la clase seleccionada coincide
-        this.actualizarInfoClaseSeleccionada();
+        if (this.esModoAyudante) {
+          this.claseSeleccionadaId = 1;
+          this.claseSeleccionadaInfo = {
+            id: 1,
+            nombre: `${this.materiaAsignadaNombre} (Cátedra Asignada)`,
+            materia: this.materiaAsignadaNombre
+          };
+        } else {
+          this.actualizarInfoClaseSeleccionada();
+        }
       })
     );
 
     // 2. Leer parámetro de ruta :claseId (ej: /horarios/:claseId)
     this.subs.push(
       this.route.paramMap.subscribe(params => {
+        if (this.esModoAyudante) {
+          this.claseSeleccionadaId = 1;
+          return;
+        }
         const idParam = params.get('claseId');
         if (idParam) {
           const idNum = Number(idParam);
@@ -144,7 +166,6 @@ export class HorariosComponent implements OnInit, OnDestroy {
             this.seleccionarClase(idNum, false);
           }
         } else {
-          // Si no hay parámetro de claseId, comprobar queryParams por compatibilidad
           const queryId = this.route.snapshot.queryParams['claseId'];
           if (queryId) {
             this.seleccionarClase(Number(queryId), false);
@@ -154,12 +175,52 @@ export class HorariosComponent implements OnInit, OnDestroy {
     );
   }
 
+  private sincronizarCatedraAyudante(): void {
+    if (!this.esModoAyudante) return;
+
+    try {
+      const publicadas = JSON.parse(localStorage.getItem('sigac_convocatorias_publicadas') || '[]');
+      if (publicadas.length > 0 && publicadas[0].nombreCatedra) {
+        this.materiaAsignadaNombre = publicadas[0].nombreCatedra;
+        if (publicadas[0].docente) {
+          this.docenteAsignadoNombre = publicadas[0].docente;
+        }
+      }
+    } catch (e) {
+      console.warn('Error al leer cátedra asignada del ayudante', e);
+    }
+
+    // Adaptar los registros de horarios para reflejar su materia asignada
+    this.horariosRegistrados = this.horariosRegistrados.map(h => {
+      if (h.esMiClase) {
+        return {
+          ...h,
+          materia: this.materiaAsignadaNombre,
+          docente: this.docenteAsignadoNombre
+        };
+      }
+      return h;
+    });
+
+    this.claseSeleccionadaId = 1;
+    this.claseSeleccionadaInfo = {
+      id: 1,
+      nombre: `${this.materiaAsignadaNombre} (Cátedra Asignada)`,
+      materia: this.materiaAsignadaNombre
+    };
+  }
+
   ngOnDestroy(): void {
     this.subs.forEach(s => s.unsubscribe());
   }
 
   // Manejar cambio en el combobox / selector
   onClaseSelectorChange(valor: string): void {
+    if (this.esModoAyudante) {
+      this.claseSeleccionadaId = 1;
+      this.actualizarInfoClaseSeleccionada();
+      return;
+    }
     if (valor === 'todas') {
       this.claseSeleccionadaId = 'todas';
       this.claseSeleccionadaInfo = null;
@@ -172,6 +233,11 @@ export class HorariosComponent implements OnInit, OnDestroy {
   }
 
   seleccionarClase(claseId: number, actualizarRuta: boolean = true): void {
+    if (this.esModoAyudante) {
+      this.claseSeleccionadaId = 1;
+      this.actualizarInfoClaseSeleccionada();
+      return;
+    }
     this.claseSeleccionadaId = claseId;
     this.actualizarInfoClaseSeleccionada();
 
@@ -181,12 +247,25 @@ export class HorariosComponent implements OnInit, OnDestroy {
   }
 
   limpiarFiltroClase(): void {
+    if (this.esModoAyudante) {
+      this.claseSeleccionadaId = 1;
+      this.actualizarInfoClaseSeleccionada();
+      return;
+    }
     this.claseSeleccionadaId = 'todas';
     this.claseSeleccionadaInfo = null;
     this.router.navigate(['/horarios']);
   }
 
   private actualizarInfoClaseSeleccionada(): void {
+    if (this.esModoAyudante) {
+      this.claseSeleccionadaInfo = {
+        id: 1,
+        nombre: `${this.materiaAsignadaNombre} (Mi Cátedra Asignada)`,
+        materia: this.materiaAsignadaNombre
+      };
+      return;
+    }
     if (this.claseSeleccionadaId === 'todas') {
       this.claseSeleccionadaInfo = null;
       return;
@@ -206,25 +285,27 @@ export class HorariosComponent implements OnInit, OnDestroy {
   // Lista de todas las clases disponibles filtradas según el rol
   get clasesFiltradasParaSelector(): Array<{ id: number; nombre: string; materia: string }> {
     if (this.esModoAyudante) {
-      return this.clasesDisponibles.filter(c => c.id === 1);
+      return [{
+        id: 1,
+        nombre: `${this.materiaAsignadaNombre} (Cátedra Asignada)`,
+        materia: this.materiaAsignadaNombre
+      }];
     }
     return this.clasesDisponibles;
   }
 
   // Lista de horarios según el filtro activo y el rol del usuario
   get horariosFiltrados(): HorarioItem[] {
-    let list = this.horariosRegistrados;
-
     // Regla estricta: El ayudante de cátedra solo tiene permitido ver el horario
-    // en el que ÉL debe dar clases a su curso asignado (nada más ni nada menos, solo donde ÉL está ocupado)
+    // en el que ÉL debe dar clases a su curso asignado (NADA MÁS)
     if (this.esModoAyudante) {
-      list = list.filter(c => c.esMiClase === true);
+      return this.horariosRegistrados.filter(c => c.esMiClase === true);
     }
 
     if (this.claseSeleccionadaId === 'todas') {
-      return list;
+      return this.horariosRegistrados;
     }
-    return list.filter(c => Number(c.claseId) === Number(this.claseSeleccionadaId));
+    return this.horariosRegistrados.filter(c => Number(c.claseId) === Number(this.claseSeleccionadaId));
   }
 
   // Obtener horario en una celda filtrando según la selección

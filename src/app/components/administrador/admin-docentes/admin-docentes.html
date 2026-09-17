@@ -202,9 +202,9 @@
                     <i class="fa-solid fa-user-gear text-[10px]"></i>
                     <span>Cambiar roles</span>
                   </button>
-                  <button title="Enviar credenciales por correo"
-                          (click)="mensajeExito = 'Credenciales reenviadas al correo de ' + doc.nombre"
-                          class="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">
+                  <button title="Enviar / Reenviar credenciales (usuario y contraseña) por correo"
+                          (click)="reenviarCredenciales(doc)"
+                          class="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer">
                     <i class="fa-solid fa-paper-plane"></i>
                   </button>
                 </div>
@@ -417,6 +417,32 @@
                     <p class="text-slate-500 text-[11px] mt-0.5">Asignar como jurado para evaluaciones puntuales sin ser miembro permanente del tribunal.</p>
                   </div>
                 </label>
+
+                <!-- Checkbox 5: Ayudante de Cátedra -->
+                <label class="flex items-start gap-3 p-2.5 bg-white rounded-lg border border-slate-200 cursor-pointer hover:border-slate-300 transition-colors">
+                  <input type="checkbox"
+                         formControlName="rolAyudante"
+                         id="chk-rol-ayudante"
+                         class="mt-0.5 rounded text-accent focus:ring-accent w-4 h-4 cursor-pointer">
+                  <div class="text-xs">
+                    <span class="font-bold text-slate-800 flex items-center gap-1.5">
+                      <i class="fa-solid fa-graduation-cap text-emerald-600"></i>
+                      Ayudante de Cátedra
+                    </span>
+                    <p class="text-slate-500 text-[11px] mt-0.5">Habilita acceso al portal de ayudantes para registrar horas de asistencia, tutorías y seguimiento.</p>
+                  </div>
+                </label>
+              </div>
+
+              <!-- Banner de notificación por correo -->
+              <div class="bg-indigo-50 border border-indigo-200 text-indigo-900 rounded-xl p-3 text-xs flex items-start gap-2.5 mt-3">
+                <i class="fa-solid fa-envelope-circle-check text-indigo-600 text-sm mt-0.5 shrink-0"></i>
+                <div>
+                  <span class="font-bold block">Despacho de Credenciales por Correo Electrónico:</span>
+                  <p class="text-[11px] text-indigo-800 mt-0.5 leading-relaxed">
+                    Al confirmar el registro, se despachará de forma automática el correo oficial con el nombre de usuario y contraseña temporal al buzón institucional ingresado.
+                  </p>
+                </div>
               </div>
             </div>
           </form>
@@ -426,20 +452,20 @@
         <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3 shrink-0">
           <button type="button"
                   (click)="cerrarModal()"
-                  class="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 rounded-xl hover:bg-slate-200/60 transition-colors">
+                  class="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 rounded-xl hover:bg-slate-200/60 transition-colors cursor-pointer">
             Cancelar
           </button>
           <button type="button"
                   (click)="guardarDocente()"
                   [disabled]="isSubmitting"
                   id="btn-confirmar-guardar-docente"
-                  class="inline-flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover text-white text-xs font-semibold rounded-xl shadow-sm transition-all disabled:opacity-50">
+                  class="inline-flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover text-white text-xs font-semibold rounded-xl shadow-sm transition-all disabled:opacity-50 cursor-pointer">
             @if (isSubmitting) {
               <i class="fa-solid fa-circle-notch fa-spin text-xs"></i>
-              <span>Registrando...</span>
+              <span>Registrando y Notificando...</span>
             } @else {
-              <i class="fa-solid fa-check text-xs"></i>
-              <span>Crear y Notificar Docente</span>
+              <i class="fa-solid fa-paper-plane text-xs"></i>
+              <span>Crear Cuenta y Notificar por Correo</span>
             }
           </button>
         </div>

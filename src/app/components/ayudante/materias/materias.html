@@ -79,6 +79,16 @@
           Mi Cátedra
         </button>
 
+        <button (click)="cambiarTab('temas')"
+                class="whitespace-nowrap py-3 px-3.5 border-b-2 font-bold text-xs sm:text-sm flex items-center gap-2 transition-all cursor-pointer"
+                [ngClass]="tabActiva === 'temas' ? 'border-accent text-accent' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'">
+          <i class="fa-solid fa-list-check"></i>
+          Temas y Contenidos
+          <span class="px-1.5 py-0.5 rounded-full text-[10px] bg-indigo-50 text-indigo-700 font-bold border border-indigo-200">
+            {{ temas.length }}
+          </span>
+        </button>
+
         <button (click)="cambiarTab('horario')"
                 class="whitespace-nowrap py-3 px-3.5 border-b-2 font-bold text-xs sm:text-sm flex items-center gap-2 transition-all cursor-pointer"
                 [ngClass]="tabActiva === 'horario' ? 'border-accent text-accent' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'">
@@ -278,11 +288,156 @@
     </div>
 
     <!-- ========================================== -->
+    <!-- PESTAÑA: TEMAS Y UNIDADES DE LA CÁTEDRA   -->
+    <!-- ========================================== -->
+    <div *ngIf="tabActiva === 'temas'" class="space-y-6">
+      
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-2xs space-y-5">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+          <div>
+            <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-list-check text-accent"></i>
+              Temas y Planificación Curricular de la Cátedra
+            </h3>
+            <p class="text-xs text-slate-500 mt-0.5">
+              Organiza las unidades temáticas para asociar recursos didácticos, talleres y actividades prácticas.
+            </p>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button (click)="modalNuevoTema = true"
+                    class="px-4 py-2 bg-accent hover:bg-accent-hover text-white text-xs font-bold rounded-xl shadow-2xs transition-all flex items-center gap-2 cursor-pointer">
+              <i class="fa-solid fa-plus"></i>
+              Añadir Nuevo Tema
+            </button>
+          </div>
+        </div>
+
+        <!-- Lista Interactiva de Temas -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <!-- Columna Izquierda: Lista de Temas -->
+          <div class="space-y-2.5 md:border-r md:border-slate-100 md:pr-4">
+            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Unidades Temáticas ({{ temas.length }})</span>
+            
+            <div *ngFor="let t of temas; let idx = index"
+                 (click)="seleccionarTema(idx)"
+                 class="p-3.5 rounded-xl border transition-all cursor-pointer flex items-start justify-between gap-2"
+                 [ngClass]="indiceTemaActual === idx ? 'bg-accent/5 border-accent/40 shadow-xs' : 'bg-white border-slate-200 hover:bg-slate-50'">
+              
+              <div class="flex items-start gap-2.5 min-w-0">
+                <span class="w-6 h-6 rounded-lg text-xs font-black flex items-center justify-center shrink-0 mt-0.5"
+                      [ngClass]="indiceTemaActual === idx ? 'bg-accent text-white' : 'bg-slate-100 text-slate-600'">
+                  {{ idx + 1 }}
+                </span>
+                <span class="text-xs font-bold leading-snug break-words"
+                      [ngClass]="indiceTemaActual === idx ? 'text-accent' : 'text-slate-800'">
+                  {{ t }}
+                </span>
+              </div>
+
+              <button (click)="eliminarTema(idx); $event.stopPropagation()"
+                      title="Eliminar tema"
+                      class="text-slate-400 hover:text-rose-600 p-1 shrink-0 transition-colors">
+                <i class="fa-solid fa-trash text-xs"></i>
+              </button>
+            </div>
+
+            <div *ngIf="temas.length === 0" class="p-4 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200 text-xs text-slate-500">
+              No hay temas registrados todavía.
+            </div>
+          </div>
+
+          <!-- Columna Derecha: Contenido y Acciones asociadas al Tema seleccionado -->
+          <div class="md:col-span-2 space-y-4">
+            <div class="p-4 bg-slate-50/70 border border-slate-200 rounded-2xl space-y-3">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <span class="text-[10px] font-bold text-accent uppercase tracking-wider block">Tema Seleccionado</span>
+                  <h4 class="text-sm font-bold text-slate-900">{{ temaActual }}</h4>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button (click)="nuevoRecurso.tema = temaActual; modalNuevoRecurso = true"
+                          class="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs">
+                    <i class="fa-solid fa-cloud-arrow-up text-accent"></i>
+                    Añadir Recurso
+                  </button>
+                  <button (click)="nuevaActividad.tema = temaActual; modalNuevaActividad = true"
+                          class="px-3 py-1.5 bg-accent hover:bg-accent-hover text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs">
+                    <i class="fa-solid fa-plus"></i>
+                    Añadir Actividad
+                  </button>
+                </div>
+              </div>
+              <p class="text-xs text-slate-500">
+                Puedes adjuntar guías de ejercicios, talleres evaluativos o lecturas específicas para esta unidad temática.
+              </p>
+            </div>
+
+            <!-- Resumen de Actividades de la Cátedra -->
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <h5 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                  <i class="fa-solid fa-folder-open text-accent"></i>
+                  Recursos y Actividades Publicados ({{ actividadesMateria.length + recursosMateria.length }})
+                </h5>
+                <button (click)="cambiarTab('recursos')" class="text-xs font-bold text-accent hover:underline">
+                  Gestionar en módulo completo &rarr;
+                </button>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div *ngFor="let act of actividadesMateria" class="p-3 bg-white border border-slate-200 rounded-xl flex items-center justify-between gap-2">
+                  <div class="min-w-0">
+                    <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 uppercase">{{ act.tipo }}</span>
+                    <p class="text-xs font-bold text-slate-800 truncate mt-1">{{ act.titulo }}</p>
+                    <p class="text-[10px] text-slate-400">Entrega: {{ formatearFecha(act.fechaEntrega) }}</p>
+                  </div>
+                  <button (click)="calificarActividad(act.id)" class="px-2 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg text-xs font-bold shrink-0">
+                    Calificar
+                  </button>
+                </div>
+
+                <div *ngFor="let rec of recursosMateria" class="p-3 bg-white border border-slate-200 rounded-xl flex items-center justify-between gap-2">
+                  <div class="min-w-0">
+                    <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 uppercase">{{ rec.tipo }}</span>
+                    <p class="text-xs font-bold text-slate-800 truncate mt-1">{{ rec.titulo }}</p>
+                    <p class="text-[10px] text-slate-400 truncate">{{ rec.nombreArchivo || rec.url }}</p>
+                  </div>
+                  <button (click)="descargarRecursoDocumento(rec)" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold shrink-0">
+                    Descargar
+                  </button>
+                </div>
+              </div>
+
+              <div *ngIf="actividadesMateria.length === 0 && recursosMateria.length === 0" class="p-6 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200 text-xs text-slate-400">
+                Aún no has agregado recursos o actividades formativas a esta cátedra.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
     <!-- PESTAÑA 2: MI HORARIO DE CLASES            -->
     <!-- ========================================== -->
     <div *ngIf="tabActiva === 'horario'" class="space-y-6">
       
       <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-2xs space-y-4">
+        <!-- Aviso de Visualización Exclusiva para el Ayudante -->
+        <div class="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div class="flex items-center gap-2.5 text-amber-900 font-semibold">
+            <i class="fa-solid fa-shield-halved text-amber-600 text-base"></i>
+            <span>Visualización Exclusiva: Solo tienes acceso al horario en el que se imparte tu materia asignada ({{ materiaSeleccionada?.nombre }} - Paralelo {{ materiaSeleccionada?.grupo }}).</span>
+          </div>
+          <a [routerLink]="['/ayudante/horarios']"
+             class="px-3.5 py-1.5 bg-amber-700 hover:bg-amber-800 text-white rounded-xl font-bold transition-all text-center shrink-0 flex items-center justify-center gap-1.5 shadow-2xs">
+            <i class="fa-solid fa-calendar-check"></i>
+            Ver Cuadrícula Semanal Completa
+          </a>
+        </div>
+
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
@@ -294,8 +449,8 @@
             </p>
           </div>
           
-          <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold">
-            <i class="fa-solid fa-triangle-exclamation text-amber-600"></i>
+          <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold">
+            <i class="fa-solid fa-circle-check text-emerald-600"></i>
             4 Horas Semanales Asignadas
           </div>
         </div>
@@ -665,6 +820,13 @@
                 <i class="fa-solid fa-clipboard-check"></i>
                 Calificar Entregas
               </button>
+
+              <!-- BOTÓN ELIMINAR ACTIVIDAD -->
+              <button (click)="eliminarActividad(act.id)"
+                      title="Eliminar actividad"
+                      class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer">
+                <i class="fa-solid fa-trash text-xs"></i>
+              </button>
             </div>
 
           </div>
@@ -714,6 +876,11 @@
                  class="px-2.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1 shadow-2xs">
                 <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> Ver
               </a>
+              <button (click)="eliminarRecurso(rec.id)"
+                      title="Eliminar recurso"
+                      class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer">
+                <i class="fa-solid fa-trash text-xs"></i>
+              </button>
             </div>
           </div>
 
@@ -873,6 +1040,15 @@
         </div>
 
         <div>
+          <label class="font-bold text-slate-700 block mb-1">Unidad Temática Asociada (Opcional)</label>
+          <select [(ngModel)]="nuevaActividad.tema"
+                  class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none">
+            <option value="">-- Sin tema específico / General --</option>
+            <option *ngFor="let t of temas" [value]="t">{{ t }}</option>
+          </select>
+        </div>
+
+        <div>
           <label class="font-bold text-slate-700 block mb-1">Instrucciones</label>
           <textarea [(ngModel)]="nuevaActividad.descripcion" rows="2" placeholder="Instrucciones para los estudiantes..."
                     class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-accent/20"></textarea>
@@ -944,6 +1120,15 @@
             <label class="font-bold text-slate-700 block mb-1">URL del Recurso (Opcional)</label>
             <input type="text" [(ngModel)]="nuevoRecurso.url" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none" />
           </div>
+        </div>
+
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Unidad Temática Asociada (Opcional)</label>
+          <select [(ngModel)]="nuevoRecurso.tema"
+                  class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none">
+            <option value="">-- Sin tema específico / General --</option>
+            <option *ngFor="let t of temas" [value]="t">{{ t }}</option>
+          </select>
         </div>
 
         <!-- Carga de Archivo Real por el Ayudante -->
@@ -1025,6 +1210,43 @@
         </button>
         <button (click)="guardarBitacora()" class="px-4 py-2 bg-accent hover:bg-accent-hover text-white rounded-xl text-xs font-bold">
           Enviar al Docente
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: NUEVO TEMA DE LA CÁTEDRA            -->
+  <!-- ========================================== -->
+  <div *ngIf="modalNuevoTema" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 max-w-md w-full shadow-xl space-y-4">
+      <div class="flex items-center justify-between">
+        <h4 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-list-check text-accent"></i>
+          Añadir Tema o Unidad Temática
+        </h4>
+        <button (click)="modalNuevoTema = false" class="text-slate-400 hover:text-slate-600">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Nombre / Título del Tema</label>
+          <input type="text" [(ngModel)]="nuevoTemaNombre" placeholder="Ej: Unidad 4: Integrales Múltiples y Modelado"
+                 class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-accent/20" />
+        </div>
+        <p class="text-[11px] text-slate-500">
+          Al agregar este tema, podrás asociarle recursos de apoyo didáctico, guías y talleres evaluativos en tu cátedra.
+        </p>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2">
+        <button (click)="modalNuevoTema = false" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold">
+          Cancelar
+        </button>
+        <button (click)="agregarNuevoTema()" class="px-4 py-2 bg-accent hover:bg-accent-hover text-white rounded-xl text-xs font-bold flex items-center gap-1.5">
+          <i class="fa-solid fa-plus"></i> Guardar Tema
         </button>
       </div>
     </div>
