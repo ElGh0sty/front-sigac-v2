@@ -101,32 +101,70 @@ export class CoordinadorService {
     return of([]);
   }
 
+  private readonly STORAGE_CONVOCATORIAS = 'sigac_convocatorias_solicitudes_v2';
+
+  public getConvocatoriasGuardadas(): Record<number, any> {
+    if (typeof window === 'undefined') return {};
+    try {
+      const val = localStorage.getItem(this.STORAGE_CONVOCATORIAS);
+      return val ? JSON.parse(val) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  public guardarConvocatoriaLocal(ayudantiaId: number, datos: any): void {
+    if (typeof window === 'undefined' || !ayudantiaId) return;
+    try {
+      const current = this.getConvocatoriasGuardadas();
+      current[ayudantiaId] = {
+        ...(current[ayudantiaId] || {}),
+        ...datos,
+        fechaConvocatoria: new Date().toISOString()
+      };
+      localStorage.setItem(this.STORAGE_CONVOCATORIAS, JSON.stringify(current));
+    } catch (e) {
+      console.warn('Error guardando convocatoria local', e);
+    }
+  }
+
   getSolicitudesAyudantia(): Observable<SolicitudAyudantiaDto[]> {
+    const convocatoriasLocales = this.getConvocatoriasGuardadas();
+
     return this.http.get<any>(`${this.apiUrl}/ayudantias/solicitudes`).pipe(
       map(res => {
         const list = Array.isArray(res) ? res : (res?.$values || res?.data || []);
         return list.map((item: any) => {
+          const aId = Number(item.ayudantiaId ?? item.id ?? item.AyudantiaId ?? 0);
+          const convLocal = aId ? (convocatoriasLocales[aId] || null) : null;
+
           const tieneTrib = Boolean(
-            item.tieneTribunal ?? item.TieneTribunal ?? Boolean((item.presentacionId || item.PresentacionId) || item.estado === 'Convocada' || item.estado === 'Tribunal Convocado')
+            convLocal?.tieneTribunal ?? (
+              item.tieneTribunal ?? item.TieneTribunal ?? Boolean((item.presentacionId || item.PresentacionId) || item.estado === 'Convocada' || item.estado === 'Tribunal Convocado')
+            )
           );
           const reunionPlan = Boolean(
-            item.reunionPlanificada ?? item.ReunionPlanificada ?? (item.fechaPresentacion || item.FechaPresentacion)
+            convLocal?.reunionPlanificada ?? (
+              item.reunionPlanificada ?? item.ReunionPlanificada ?? (item.fechaPresentacion || item.FechaPresentacion)
+            )
           );
-          const juradosList = item.jurados ?? item.Jurados ?? (item.profesoresAsignados || item.ProfesoresAsignados || []);
+          const juradosList = convLocal?.jurados ?? (item.jurados ?? item.Jurados ?? (item.profesoresAsignados || item.ProfesoresAsignados || []));
+          const fechaPres = convLocal?.fechaPresentacion ?? (item.fechaPresentacion ?? item.FechaPresentacion ?? null);
+          const estadoFinal = convLocal ? (convLocal.estado || 'Convocada') : (item.estado ?? item.estadoAyudantia ?? (tieneTrib ? 'Convocada' : 'Pendiente'));
 
           const prom = Number(item.promedioEstudiante ?? item.promedio ?? item.promedioGeneral ?? 8.75);
           const pct = Number(item.porcentajeMallaAprobada ?? item.porcentajeMalla ?? 65.0);
 
           return {
-            ayudantiaId: Number(item.ayudantiaId ?? item.id ?? item.AyudantiaId ?? 0),
+            ayudantiaId: aId,
             estudianteId: Number(item.estudianteId ?? item.usuarioId ?? item.EstudianteId ?? 0),
             nombreEstudiante: item.nombreEstudiante ?? item.estudianteNombre ?? item.estudiante ?? item.nombreCompleto ?? (item.estudiante?.nombres ? `${item.estudiante.nombres} ${item.estudiante.apellidos || ''}` : 'Estudiante Postulante'),
             correoEstudiante: item.correo ?? item.email ?? item.correoEstudiante ?? '',
             cedulaEstudiante: item.cedulaEstudiante ?? item.cedula ?? item.ci ?? '',
-            temaSilabo: item.temaSilabo ?? item.tema ?? item.temaSilaboPropuesto ?? 'Sustentación de Contenidos del Sílabo',
+            temaSilabo: convLocal?.temaSilabo ?? item.temaSilabo ?? item.tema ?? item.temaSilaboPropuesto ?? 'Sustentación de Contenidos del Sílabo',
             catedraId: Number(item.catedraId ?? item.materiaId ?? item.CatedraId ?? 0),
             nombreCatedra: item.nombreCatedra ?? item.materiaNombre ?? item.catedra ?? 'Cátedra Asignada',
-            estado: item.estado ?? item.estadoAyudantia ?? (tieneTrib ? 'Convocada' : 'Pendiente'),
+            estado: estadoFinal,
             promedio: prom,
             promedioEstudiante: prom,
             porcentajeMalla: pct,
@@ -134,19 +172,19 @@ export class CoordinadorService {
             notaCatedra: Number(item.notaCatedra ?? item.calificacion ?? 9.0),
             fecha: item.fecha ?? item.fechaSolicitud ?? new Date().toISOString().split('T')[0],
             tieneTribunal: tieneTrib,
-            presentacionId: item.presentacionId ?? item.PresentacionId ?? null,
-            fechaPresentacion: item.fechaPresentacion ?? item.FechaPresentacion ?? null,
+            presentacionId: convLocal?.presentacionId ?? (item.presentacionId ?? item.PresentacionId ?? null),
+            fechaPresentacion: fechaPres,
             reunionPlanificada: reunionPlan,
             jurados: Array.isArray(juradosList) ? juradosList : [],
             docenteId: Number(item.docenteId ?? item.docenteResponsableId ?? 0),
             coordinacionId: Number(item.coordinacionId ?? 1),
             carrera: item.carrera || 'Ingeniería en Software',
-            estadoTribunal: item.estadoTribunal ?? item.EstadoTribunal ?? (
+            estadoTribunal: convLocal?.estadoTribunal ?? item.estadoTribunal ?? item.EstadoTribunal ?? (
               tieneTrib
                 ? (reunionPlan ? 'Tribunal Convocado - Reunión Planificada' : 'Tribunal Convocado - Pendiente Planificar Fecha/Jurados')
                 : 'Sin Tribunal'
             ),
-            mensajeTribunal: item.mensajeTribunal ?? item.MensajeTribunal ?? (
+            mensajeTribunal: convLocal?.mensajeTribunal ?? item.mensajeTribunal ?? item.MensajeTribunal ?? (
               tieneTrib && reunionPlan
                 ? `Tribunal convocado y reunión planificada. Jurados: ${Array.isArray(juradosList) ? juradosList.join(', ') : 'Asignados'}`
                 : (tieneTrib ? 'Tribunal convocado. Pendiente agendar fecha y docentes jurados.' : 'Sin tribunal convocado')
@@ -167,28 +205,40 @@ export class CoordinadorService {
         return this.estudianteService.historial$.pipe(
           map(list => list.map(h => {
             const histAny = h as any;
+            const aId = Number(h.ayudantiaId || 0);
+            const convLocal = aId ? (convocatoriasLocales[aId] || null) : null;
+
+            const tieneTrib = Boolean(
+              convLocal?.tieneTribunal ?? (
+                h.estadoAyudantia === 'Convocada' || h.estadoAyudantia === 'Tribunal Convocado' || Boolean(histAny.tieneTribunal)
+              )
+            );
+            const reunionPlan = Boolean(convLocal?.reunionPlanificada ?? histAny.reunionPlanificada);
+            const fechaPres = convLocal?.fechaPresentacion ?? (histAny.fechaPresentacion || null);
+            const juradosList = convLocal?.jurados ?? (histAny.jurados || []);
+
             return {
               ayudantiaId: h.ayudantiaId,
               estudianteId: h.estudianteId || 1,
               nombreEstudiante: h.nombreEstudiante || 'Estudiante Postulante',
               correoEstudiante: 'postulante@uteq.edu.ec',
               cedulaEstudiante: '1700000000',
-              temaSilabo: 'Sustentación de Contenidos del Sílabo',
+              temaSilabo: convLocal?.temaSilabo ?? 'Sustentación de Contenidos del Sílabo',
               catedraId: h.catedraId,
               nombreCatedra: h.nombreCatedra,
-              estado: h.estadoAyudantia || 'Pendiente',
+              estado: convLocal ? (convLocal.estado || 'Convocada') : (h.estadoAyudantia || 'Pendiente'),
               promedio: 8.8,
               promedioEstudiante: 8.8,
               porcentajeMalla: 60.0,
               porcentajeMallaAprobada: 60.0,
               notaCatedra: 9.2,
               fecha: '2026-08-20',
-              tieneTribunal: h.estadoAyudantia === 'Convocada' || h.estadoAyudantia === 'Tribunal Convocado' || Boolean(histAny.tieneTribunal),
-              reunionPlanificada: Boolean(histAny.reunionPlanificada),
-              fechaPresentacion: histAny.fechaPresentacion || null,
-              jurados: [],
-              estadoTribunal: h.estadoAyudantia === 'Convocada' ? 'Tribunal Convocado - Pendiente Planificar Fecha/Jurados' : 'Sin Tribunal',
-              mensajeTribunal: '',
+              tieneTribunal: tieneTrib,
+              reunionPlanificada: reunionPlan,
+              fechaPresentacion: fechaPres,
+              jurados: Array.isArray(juradosList) ? juradosList : [],
+              estadoTribunal: convLocal?.estadoTribunal ?? (tieneTrib ? 'Tribunal Convocado - Reunión Planificada' : 'Sin Tribunal'),
+              mensajeTribunal: convLocal?.mensajeTribunal ?? '',
               notaDocente: histAny.notaDocente,
               observacionDocente: histAny.observacionDocente,
               notaAdmin: histAny.notaAdmin,
@@ -276,9 +326,10 @@ export class CoordinadorService {
   }
 
   asignarAyudanteOficial(body: any): Observable<any> {
+    const aId = Number(body.ayudantiaId ?? body.id ?? 0);
     const payload = {
-      AyudantiaId: Number(body.ayudantiaId ?? body.id ?? 0),
-      ayudantiaId: Number(body.ayudantiaId ?? body.id ?? 0),
+      AyudantiaId: aId,
+      ayudantiaId: aId,
       EstudianteId: Number(body.estudianteId ?? 0),
       estudianteId: Number(body.estudianteId ?? 0),
       CatedraId: Number(body.catedraId ?? 0),
@@ -287,8 +338,9 @@ export class CoordinadorService {
       observacionAdmin: body.observacionAdmin || body.observaciones || undefined,
       fechaCalificacionAdmin: body.fechaCalificacionAdmin || new Date().toISOString()
     };
-    if (body.ayudantiaId) {
-      this.estudianteService.actualizarEstadoPostulacion(body.ayudantiaId, 'Asignada');
+    if (aId) {
+      this.estudianteService.actualizarEstadoPostulacion(aId, 'Asignada');
+      this.guardarConvocatoriaLocal(aId, { estado: 'Asignada', estadoTribunal: 'Aprobado y Posesionado' });
     }
     return this.http.post(`${this.apiUrl}/ayudantias/asignar`, payload).pipe(
       catchError(() => of({ success: true, message: 'Ayudante posesionado exitosamente' }))
@@ -305,6 +357,7 @@ export class CoordinadorService {
     const payload = { nuevoEstado: 'Rechazada', estado: 'Rechazada', motivo, observaciones: motivo };
     if (ayudantiaId) {
       this.estudianteService.actualizarEstadoPostulacion(ayudantiaId, 'Rechazada');
+      this.guardarConvocatoriaLocal(ayudantiaId, { estado: 'Rechazada', estadoTribunal: 'No Aprobado' });
     }
     return this.http.put(`${this.apiUrl}/ayudantias/${ayudantiaId}/estado`, payload).pipe(
       catchError(() => this.http.post(`${this.apiUrl}/ayudantias/${ayudantiaId}/rechazar`, payload)),
@@ -313,7 +366,17 @@ export class CoordinadorService {
   }
 
   actualizarEstadoSolicitud(ayudantiaId: number, estado: string): Observable<any> {
-    return this.http.put(`${this.apiUrl}/ayudantias/${ayudantiaId}/estado`, { nuevoEstado: estado }).pipe(
+    if (ayudantiaId && estado === 'Convocada') {
+      this.estudianteService.actualizarEstadoPostulacion(ayudantiaId, 'Convocada');
+      this.guardarConvocatoriaLocal(ayudantiaId, {
+        tieneTribunal: true,
+        reunionPlanificada: true,
+        estado: 'Convocada',
+        estadoTribunal: 'Tribunal Convocado - Reunión Planificada'
+      });
+    }
+    return this.http.put(`${this.apiUrl}/ayudantias/${ayudantiaId}/estado`, { nuevoEstado: estado, estado }).pipe(
+      catchError(() => this.http.post(`${this.apiUrl}/ayudantias/${ayudantiaId}/estado`, { nuevoEstado: estado, estado })),
       catchError(() => of({ success: true }))
     );
   }

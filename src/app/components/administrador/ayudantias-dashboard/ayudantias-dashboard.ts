@@ -298,9 +298,17 @@ export class AyudantiasDashboardComponent implements OnInit, OnDestroy {
 
     return base.filter(s => {
       const st = (s.estado || '').toLowerCase().trim();
-      const matchEstado =
-        this.filtroSolicitudesEstado === 'todas' ||
-        st === this.filtroSolicitudesEstado.toLowerCase();
+      let matchEstado = this.filtroSolicitudesEstado === 'todas';
+      if (!matchEstado) {
+        const f = this.filtroSolicitudesEstado.toLowerCase();
+        if (f === 'convocada' || f === 'tribunal convocado') {
+          matchEstado = st === 'convocada' || s.tieneTribunal === true;
+        } else if (f === 'pendiente') {
+          matchEstado = (st === 'pendiente' || !st) && !s.tieneTribunal;
+        } else {
+          matchEstado = st.includes(f);
+        }
+      }
 
       const matchTexto =
         !this.busquedaSolicitud.trim() ||
@@ -593,10 +601,10 @@ export class AyudantiasDashboardComponent implements OnInit, OnDestroy {
   }
 
   guardarConvocatoriaTribunal(): void {
-    const sel = this.solicitudSeleccionada as any;
-    const ayudantiaId = Number(sel?.ayudantiaId || this.solicitudSeleccionadaParaTribunal?.ayudantiaId || 0);
-    const postulanteId = Number(sel?.estudianteId || sel?.postulanteId || sel?.id || this.solicitudSeleccionadaParaTribunal?.estudianteId || 0);
-    const catedraId = Number(sel?.catedraId || sel?.materiaId || this.solicitudSeleccionadaParaTribunal?.catedraId || 1);
+    const sol = this.solicitudSeleccionadaParaTribunal || (this.solicitudSeleccionada as any);
+    const ayudantiaId = Number(sol?.ayudantiaId || sol?.id || 0);
+    const postulanteId = Number(sol?.estudianteId || sol?.postulanteId || sol?.id || 0);
+    const catedraId = Number(sol?.catedraId || sol?.materiaId || 1);
 
     let juradoId = Number(this.convocatoria?.juradoId || this.formTribunal?.docenteTribunalId);
     if (!juradoId || juradoId <= 0) {
@@ -618,26 +626,32 @@ export class AyudantiasDashboardComponent implements OnInit, OnDestroy {
     }
 
     const docenteItem = this.docentesDisponibles.find(d => Number(d.id) === juradoId);
-    const juradoNombre = docenteItem?.nombre ? `${docenteItem.nombre} ${docenteItem.apellido || ''}`.trim() : (this.formTribunal.juradoNombre || 'Docente Evaluador Titular');
+    const juradoNombre = docenteItem?.nombre ? `${docenteItem.nombre} ${docenteItem.apellido || ''}`.trim() : (this.formTribunal?.juradoNombre || 'Docente Evaluador Titular');
+    const temaFinal = this.convocatoria?.tema?.trim() || this.formTribunal?.tema?.trim() || `Evaluación de Destrezas Pedagógicas y Conocimientos: ${sol?.nombreCatedra || 'Cátedra UTEQ'}`;
+    const lugarFinal = this.convocatoria?.lugar?.trim() || this.formTribunal?.lugar?.trim() || 'Aula Asignada / Enlace Virtual Teams UTEQ';
 
     const payload = {
       ayudantiaId: ayudantiaId || postulanteId,
       AyudantiaId: ayudantiaId || postulanteId,
       postulanteId: postulanteId,
       estudianteId: postulanteId,
-      estudianteNombre: this.solicitudSeleccionadaParaTribunal?.nombreEstudiante || 'Estudiante Postulante',
-      catedraNombre: this.solicitudSeleccionadaParaTribunal?.nombreCatedra || 'Cátedra UTEQ',
+      estudianteNombre: sol?.nombreEstudiante || 'Estudiante Postulante',
+      estudianteCorreo: sol?.correoEstudiante || 'postulante@uteq.edu.ec',
+      catedraNombre: sol?.nombreCatedra || 'Cátedra UTEQ',
       catedraId: catedraId,
       materiaId: catedraId,
       juradoId: juradoId,
       docentesIds: [juradoId],
+      juradoIds: [juradoId],
+      juradoNombre: juradoNombre,
       profesoresAsignados: [juradoNombre],
       fechaPresentacion: fechaIso,
       fecha: fechaIso,
-      tema: this.convocatoria?.tema?.trim() || this.formTribunal?.tema?.trim() || 'Evaluación de Destrezas Pedagógicas y Conocimientos en la Cátedra',
-      temaSilabo: this.convocatoria?.tema?.trim() || this.formTribunal?.tema?.trim() || 'Evaluación de Destrezas Pedagógicas y Conocimientos en la Cátedra',
-      lugar: this.convocatoria?.lugar?.trim() || this.formTribunal?.lugar?.trim() || 'Aula Asignada / Enlace Virtual Teams UTEQ',
-      lugarOEnlace: this.convocatoria?.lugar?.trim() || this.formTribunal?.lugar?.trim() || 'Aula Asignada / Enlace Virtual Teams UTEQ'
+      tema: temaFinal,
+      temaSilabo: temaFinal,
+      lugar: lugarFinal,
+      lugarOEnlace: lugarFinal,
+      estado: 'Convocada'
     };
 
     Swal.fire({
@@ -648,34 +662,94 @@ export class AyudantiasDashboardComponent implements OnInit, OnDestroy {
     });
 
     this.juradoService.convocarPresentacion(payload).subscribe({
-      next: () => {
-        if (this.solicitudSeleccionadaParaTribunal) {
-          this.solicitudSeleccionadaParaTribunal.tieneTribunal = true;
-          this.solicitudSeleccionadaParaTribunal.reunionPlanificada = true;
-          this.solicitudSeleccionadaParaTribunal.estado = 'Convocada';
-          this.solicitudSeleccionadaParaTribunal.estadoTribunal = 'Tribunal Convocado - Reunión Planificada';
-          this.solicitudSeleccionadaParaTribunal.fechaPresentacion = fechaIso;
-          this.solicitudSeleccionadaParaTribunal.jurados = [juradoNombre];
-          this.solicitudSeleccionadaParaTribunal.mensajeTribunal = `Tribunal convocado y reunión planificada para el ${new Date(fechaIso).toLocaleString()}`;
+      next: (res) => {
+        const presId = Number(res?.id ?? res?.Id ?? res?.presentacionId ?? res?.PresentacionId ?? (ayudantiaId > 0 ? ayudantiaId : Math.floor(Math.random() * 900000) + 1000));
+        const convData = {
+          tieneTribunal: true,
+          reunionPlanificada: true,
+          estado: 'Convocada',
+          estadoTribunal: 'Tribunal Convocado - Reunión Planificada',
+          fechaPresentacion: fechaIso,
+          jurados: [juradoNombre],
+          mensajeTribunal: `Tribunal convocado y reunión planificada para el ${new Date(fechaIso).toLocaleString()}`,
+          temaSilabo: temaFinal,
+          lugarOEnlace: lugarFinal,
+          presentacionId: presId
+        };
 
-          if (this.solicitudSeleccionadaParaTribunal.ayudantiaId) {
-            this.coordinadorService.actualizarEstadoAyudantia(this.solicitudSeleccionadaParaTribunal.ayudantiaId, 'Convocada').subscribe();
-          }
+        // Guardar persistente en el servicio coordinador
+        if (ayudantiaId) {
+          this.coordinadorService.guardarConvocatoriaLocal(ayudantiaId, convData);
+          this.coordinadorService.actualizarEstadoAyudantia(ayudantiaId, 'Convocada').subscribe();
         }
+
+        // Actualizar en memoria en this.solicitudes
+        const idx = this.solicitudes.findIndex(s => s.ayudantiaId === ayudantiaId || (postulanteId > 0 && s.estudianteId === postulanteId && s.catedraId === catedraId));
+        if (idx !== -1) {
+          this.solicitudes[idx] = {
+            ...this.solicitudes[idx],
+            ...convData
+          };
+        } else if (sol) {
+          this.solicitudes.unshift({
+            ...sol,
+            ...convData
+          });
+        }
+
+        // Crear y añadir inmediatamente la presentación en memoria
+        const nuevaPres: PresentacionDetalleDto = {
+          id: presId,
+          ayudantiaId: ayudantiaId,
+          estudianteId: postulanteId,
+          estudianteNombre: sol?.nombreEstudiante || 'Estudiante Postulante',
+          estudianteCorreo: sol?.correoEstudiante || 'postulante@uteq.edu.ec',
+          catedraId: catedraId,
+          catedraNombre: sol?.nombreCatedra || 'Cátedra UTEQ',
+          fecha: fechaIso,
+          temaSilabo: temaFinal,
+          lugarOEnlace: lugarFinal,
+          profesoresAsignados: [juradoNombre],
+          estado: 'Convocada',
+          yaEvaluadoPorMi: false,
+          promedioNota: 0
+        };
+
+        this.presentaciones = [
+          nuevaPres,
+          ...this.presentaciones.filter(p => p.id !== nuevaPres.id && (ayudantiaId ? p.ayudantiaId !== ayudantiaId : true))
+        ];
+
+        this.actualizarMetricas();
+        this.cerrarModalTribunal();
 
         Swal.fire({
           icon: 'success',
           title: '¡Tribunal Convocado y Reunión Planificada!',
-          html: `La presentación para <b>${this.solicitudSeleccionadaParaTribunal?.nombreEstudiante || 'el postulante'}</b> fue planificada exitosamente.<br><small class="text-slate-500">Docente Jurado: ${juradoNombre}</small>`,
+          html: `La presentación para <b>${sol?.nombreEstudiante || 'el postulante'}</b> fue planificada exitosamente.<br><small class="text-slate-500">Docente Jurado: ${juradoNombre}</small>`,
           timer: 3000,
           showConfirmButton: true
         });
 
-        this.cerrarModalTribunal();
-        this.cargarSolicitudes();
-        this.cargarPresentaciones();
+        // Cambiar directamente a la pestaña de tribunales / convocadas para que aparezca de inmediato
         this.cambiarTab('tribunales');
-        this.cdr.detectChanges();
+
+        // Recargar para sincronizar con backend sin perder los datos
+        this.coordinadorService.getSolicitudesAyudantia().subscribe({
+          next: (sols) => {
+            if (Array.isArray(sols) && sols.length > 0) {
+              this.solicitudes = sols;
+            }
+            this.cargarPresentaciones();
+            this.cdr.markForCheck();
+            this.cdr.detectChanges();
+          },
+          error: () => {
+            this.cargarPresentaciones();
+            this.cdr.markForCheck();
+            this.cdr.detectChanges();
+          }
+        });
       },
       error: (err) => {
         console.error('Error al convocar tribunal:', err);
@@ -695,7 +769,35 @@ export class AyudantiasDashboardComponent implements OnInit, OnDestroy {
     this.juradoService.getPresentaciones().subscribe({
       next: (data) => {
         this.isLoadingTribunales = false;
-        this.presentaciones = Array.isArray(data) ? [...data] : [];
+        const apiPresentaciones = Array.isArray(data) ? [...data] : [];
+
+        // Asegurar que todas las solicitudes con tribunal convocado en la BD se incluyan en la pestaña de Convocadas
+        const ayudantiaIdsEnPresentaciones = new Set(apiPresentaciones.map(p => p.ayudantiaId).filter(id => id && id > 0));
+        
+        const convocadasDesdeSolicitudes: PresentacionDetalleDto[] = (this.solicitudes || [])
+          .filter(s => (s.tieneTribunal || (s.estado || '').toLowerCase() === 'convocada' || s.reunionPlanificada || (s.presentacionId && s.presentacionId > 0)) && !ayudantiaIdsEnPresentaciones.has(s.ayudantiaId))
+          .map(s => ({
+            id: s.presentacionId || s.ayudantiaId || Math.floor(Math.random() * 1000) + 10,
+            ayudantiaId: s.ayudantiaId,
+            estudianteId: s.estudianteId,
+            estudianteNombre: s.nombreEstudiante,
+            estudianteCorreo: s.correoEstudiante || 'postulante@uteq.edu.ec',
+            catedraId: s.catedraId,
+            catedraNombre: s.nombreCatedra,
+            fecha: s.fechaPresentacion || new Date(Date.now() + 86400000 * 3).toISOString(),
+            temaSilabo: s.temaSilabo || 'Evaluación de Destrezas Pedagógicas y Conocimientos en la Cátedra',
+            lugarOEnlace: 'Aula Asignada / Enlace Virtual Teams UTEQ',
+            profesoresAsignados: s.jurados && s.jurados.length > 0 ? s.jurados : ['Docente Jurado Asignado'],
+            estado: 'Convocada' as const,
+            yaEvaluadoPorMi: false
+          }));
+
+        // Preservar en memoria cualquier presentación reciente que no esté en las anteriores
+        const idsExistentes = new Set([...apiPresentaciones, ...convocadasDesdeSolicitudes].map(p => p.id));
+        const aIdsExistentes = new Set([...apiPresentaciones, ...convocadasDesdeSolicitudes].map(p => p.ayudantiaId).filter(id => id && id > 0));
+        const enMemoria = (this.presentaciones || []).filter(p => !idsExistentes.has(p.id) && (!p.ayudantiaId || !aIdsExistentes.has(p.ayudantiaId)));
+
+        this.presentaciones = [...apiPresentaciones, ...convocadasDesdeSolicitudes, ...enMemoria];
         this.actualizarMetricas();
         this.cdr.markForCheck();
         this.cdr.detectChanges();
@@ -703,7 +805,25 @@ export class AyudantiasDashboardComponent implements OnInit, OnDestroy {
       error: (err) => {
         this.isLoadingTribunales = false;
         console.warn('Error al cargar presentaciones:', err);
-        this.presentaciones = [];
+        const convocadasDesdeSolicitudes: PresentacionDetalleDto[] = (this.solicitudes || [])
+          .filter(s => s.tieneTribunal || (s.estado || '').toLowerCase() === 'convocada' || s.reunionPlanificada)
+          .map(s => ({
+            id: s.presentacionId || s.ayudantiaId || 1,
+            ayudantiaId: s.ayudantiaId,
+            estudianteId: s.estudianteId,
+            estudianteNombre: s.nombreEstudiante,
+            estudianteCorreo: s.correoEstudiante || 'postulante@uteq.edu.ec',
+            catedraId: s.catedraId,
+            catedraNombre: s.nombreCatedra,
+            fecha: s.fechaPresentacion || new Date().toISOString(),
+            temaSilabo: 'Evaluación de Destrezas Pedagógicas y Conocimientos en la Cátedra',
+            lugarOEnlace: 'Aula Asignada / Enlace Virtual Teams UTEQ',
+            profesoresAsignados: s.jurados && s.jurados.length > 0 ? s.jurados : ['Docente Jurado Asignado'],
+            estado: 'Convocada' as const,
+            yaEvaluadoPorMi: false
+          }));
+        this.presentaciones = convocadasDesdeSolicitudes;
+        this.actualizarMetricas();
         this.cdr.markForCheck();
       }
     });
@@ -711,8 +831,12 @@ export class AyudantiasDashboardComponent implements OnInit, OnDestroy {
 
   // Pestaña 2: Mostrar todas las defensas convocadas de la BD que aún NO están aprobadas
   get defensasPendientes(): PresentacionDetalleDto[] {
-    const base = (this.presentaciones || []).filter(p => {
+    const list = this.presentaciones || [];
+    const base = list.filter(p => {
       const est = (p.estado || '').toLowerCase().trim();
+      if (this.filtroTribunalEstado === 'aprobada') {
+        return est === 'aprobada' || est === 'aprobado' || est === 'posesionado';
+      }
       return est !== 'aprobada' && est !== 'aprobado' && est !== 'posesionado';
     });
 
@@ -724,13 +848,14 @@ export class AyudantiasDashboardComponent implements OnInit, OnDestroy {
       const st = (p.estado || '').toLowerCase().trim();
       const matchEstado =
         this.filtroTribunalEstado === 'todas' ||
-        st.includes(this.filtroTribunalEstado.toLowerCase());
+        st.includes(this.filtroTribunalEstado.toLowerCase()) ||
+        (this.filtroTribunalEstado === 'convocada' && (st === 'convocada' || !st));
 
       const matchTexto =
         !this.busquedaTribunal.trim() ||
-        p.estudianteNombre.toLowerCase().includes(this.busquedaTribunal.toLowerCase()) ||
-        p.catedraNombre.toLowerCase().includes(this.busquedaTribunal.toLowerCase()) ||
-        p.temaSilabo.toLowerCase().includes(this.busquedaTribunal.toLowerCase());
+        (p.estudianteNombre || '').toLowerCase().includes(this.busquedaTribunal.toLowerCase()) ||
+        (p.catedraNombre || '').toLowerCase().includes(this.busquedaTribunal.toLowerCase()) ||
+        (p.temaSilabo || '').toLowerCase().includes(this.busquedaTribunal.toLowerCase());
 
       return matchEstado && matchTexto;
     });

@@ -11,6 +11,7 @@ export interface CrearPresentacionDto {
   catedraId?: number;
   materiaId?: number;
   juradoId?: number;
+  juradoNombre?: string;
   docentesIds?: number[];
   fechaPresentacion?: string;
   fecha?: string;
@@ -18,7 +19,7 @@ export interface CrearPresentacionDto {
   temaSilabo?: string;
   lugar?: string;
   lugarOEnlace?: string;
-  profesoresAsignados?: string[];
+  profesoresAsignados?: string[] | string;
   decanoId?: number;
   coordinadorCarreraId?: number;
 }
@@ -148,22 +149,49 @@ export class JuradoService {
     return this.crearPresentacion(dto);
   }
   crearPresentacion(dto: CrearPresentacionDto): Observable<any> {
+    const jId = Number(dto.juradoId || (dto.docentesIds && dto.docentesIds.length > 0 ? dto.docentesIds[0] : 1));
+    const juradoIdsList = dto.docentesIds && dto.docentesIds.length > 0 ? dto.docentesIds : [jId];
+
+    // En C# DTO: ProfesoresAsignados es un string separado por comas (dto.ProfesoresAsignados.Split(','))
+    const rawProfesores: any = dto.profesoresAsignados;
+    let juradosNombres: string[] = [];
+    if (Array.isArray(rawProfesores) && rawProfesores.length > 0) {
+      juradosNombres = rawProfesores;
+    } else if (typeof rawProfesores === 'string' && rawProfesores.trim() && isNaN(Number(rawProfesores))) {
+      juradosNombres = [rawProfesores.trim()];
+    } else if ((dto as any).juradoNombre) {
+      juradosNombres = [(dto as any).juradoNombre];
+    } else {
+      juradosNombres = ['Docente Jurado Asignado'];
+    }
+
+    const profesoresStr = juradosNombres.join(', ');
+
+    const aId = Number(dto.ayudantiaId || dto.postulanteId || dto.estudianteId || 0);
+    const pId = Number(dto.postulanteId || dto.estudianteId || dto.ayudantiaId || 0);
+    const cId = Number(dto.catedraId || dto.materiaId || 0);
+
     const payload = {
-      ayudantiaId: Number(dto.ayudantiaId || dto.postulanteId || dto.estudianteId || 0),
-      AyudantiaId: Number(dto.ayudantiaId || dto.postulanteId || dto.estudianteId || 0),
-      postulanteId: Number(dto.postulanteId || dto.estudianteId || dto.ayudantiaId || 0),
-      estudianteId: Number(dto.estudianteId || dto.postulanteId || dto.ayudantiaId || 0),
-      catedraId: Number(dto.catedraId || dto.materiaId || 0),
-      materiaId: Number(dto.catedraId || dto.materiaId || 0),
-      juradoId: Number(dto.juradoId || (dto.docentesIds && dto.docentesIds.length > 0 ? dto.docentesIds[0] : 0)),
-      docentesIds: dto.docentesIds || (dto.juradoId ? [dto.juradoId] : []),
+      ayudantiaId: aId,
+      AyudantiaId: aId,
+      postulanteId: pId,
+      estudianteId: pId,
+      catedraId: cId,
+      materiaId: cId,
+      juradoId: jId,
+      docentesIds: juradoIdsList,
+      juradoIds: juradoIdsList,
+      profesoresAsignados: profesoresStr,
+      jurados: juradosNombres,
       fechaPresentacion: dto.fechaPresentacion || dto.fecha || new Date().toISOString(),
       fecha: dto.fechaPresentacion || dto.fecha || new Date().toISOString(),
       tema: dto.tema || dto.temaSilabo || 'Evaluación Pedagógica y Sílabo',
       temaSilabo: dto.tema || dto.temaSilabo || 'Evaluación Pedagógica y Sílabo',
       lugar: dto.lugar || dto.lugarOEnlace || 'Aula Magna / Virtual',
       lugarOEnlace: dto.lugar || dto.lugarOEnlace || 'Aula Magna / Virtual',
-      profesoresAsignados: dto.profesoresAsignados || []
+      estudianteNombre: (dto as any).estudianteNombre || (dto as any).nombreEstudiante || 'Postulante',
+      catedraNombre: (dto as any).catedraNombre || (dto as any).nombreCatedra || 'Cátedra',
+      estado: 'Convocada'
     };
 
     const urlCoordinador = `${getApiBase()}/api/Coordinador/ayudantias/convocar-tribunal`;
@@ -176,29 +204,36 @@ export class JuradoService {
       catchError(() => this.http.post<any>(urlJurado, payload)),
       catchError(() => this.http.post<any>(urlAyudantias, payload)),
       tap((res) => {
-        const itemCreado = this.mapPresentacion(res || payload);
-        const actualizadas = [itemCreado, ...this.presentacionesSubject.value.filter(p => p.id !== itemCreado.id)];
+        const presId = Number(res?.id ?? res?.Id ?? res?.presentacionId ?? res?.PresentacionId ?? (payload.ayudantiaId > 0 ? payload.ayudantiaId : Math.floor(Math.random() * 900000) + 1000));
+        const itemCreado: PresentacionDetalleDto = {
+          ...this.mapPresentacion({ ...payload, ...(res || {}) }),
+          id: presId,
+          ayudantiaId: payload.ayudantiaId,
+          profesoresAsignados: juradosNombres,
+          estado: 'Convocada'
+        };
+        const actualizadas = [itemCreado, ...this.presentacionesSubject.value.filter(p => p.id !== itemCreado.id && (itemCreado.ayudantiaId ? p.ayudantiaId !== itemCreado.ayudantiaId : true))];
         this.presentacionesSubject.next(actualizadas);
         this.saveStorage(this.STORAGE_PRESENTACIONES, actualizadas);
       }),
       catchError(() => {
-        const fallbackId = Math.floor((Date.now() / 1000) % 2000000000) + 1;
+        const fallbackId = payload.ayudantiaId > 0 ? payload.ayudantiaId : (Math.floor(Date.now() % 900000) + 1000);
         const fallbackItem: PresentacionDetalleDto = {
           id: fallbackId,
           ayudantiaId: payload.ayudantiaId,
           estudianteId: payload.postulanteId,
-          estudianteNombre: 'Postulante Seleccionado',
+          estudianteNombre: (payload as any).estudianteNombre || 'Postulante Seleccionado',
           estudianteCorreo: 'postulante@uteq.edu.ec',
           catedraId: payload.catedraId,
-          catedraNombre: 'Cátedra de Ayudantía',
+          catedraNombre: (payload as any).catedraNombre || 'Cátedra de Ayudantía',
           fecha: payload.fecha,
           temaSilabo: payload.tema,
           lugarOEnlace: payload.lugar,
-          profesoresAsignados: payload.profesoresAsignados,
+          profesoresAsignados: juradosNombres,
           estado: 'Convocada',
           yaEvaluadoPorMi: false
         };
-        const actualizadas = [fallbackItem, ...this.presentacionesSubject.value];
+        const actualizadas = [fallbackItem, ...this.presentacionesSubject.value.filter(p => p.id !== fallbackItem.id && (fallbackItem.ayudantiaId ? p.ayudantiaId !== fallbackItem.ayudantiaId : true))];
         this.presentacionesSubject.next(actualizadas);
         this.saveStorage(this.STORAGE_PRESENTACIONES, actualizadas);
         return of(fallbackItem);
@@ -249,21 +284,24 @@ export class JuradoService {
   }
 
   private mapPresentacion(raw: any): PresentacionDetalleDto {
+    const rawJurados = raw.profesoresAsignados ?? raw.ProfesoresAsignados ?? raw.jurados ?? raw.Jurados ?? [];
+    const juradosList = Array.isArray(rawJurados) ? rawJurados : (typeof rawJurados === 'string' ? [rawJurados] : []);
+
     return {
-      id: raw.id ?? raw.Id ?? 1,
+      id: raw.id ?? raw.Id ?? raw.presentacionId ?? raw.PresentacionId ?? 1,
       ayudantiaId: raw.ayudantiaId ?? raw.AyudantiaId ?? 0,
-      estudianteId: raw.estudianteId ?? raw.EstudianteId ?? 1,
-      estudianteNombre: raw.estudianteNombre ?? raw.EstudianteNombre ?? raw.estudiante ?? 'Postulante',
-      estudianteCorreo: raw.estudianteCorreo ?? raw.EstudianteCorreo ?? 'postulante@uteq.edu.ec',
-      catedraId: raw.catedraId ?? raw.CatedraId ?? 1,
-      catedraNombre: raw.catedraNombre ?? raw.CatedraNombre ?? raw.catedra ?? 'Cátedra',
-      fecha: raw.fecha ?? raw.Fecha ?? new Date().toISOString(),
-      temaSilabo: raw.temaSilabo ?? raw.TemaSilabo ?? 'Sustentación de Contenido Programático del Sílabo',
-      lugarOEnlace: raw.lugarOEnlace ?? raw.LugarOEnlace ?? 'Auditorio / Aula Virtual',
+      estudianteId: raw.estudianteId ?? raw.EstudianteId ?? raw.postulanteId ?? 1,
+      estudianteNombre: raw.estudianteNombre ?? raw.EstudianteNombre ?? raw.nombreEstudiante ?? raw.estudiante ?? 'Postulante',
+      estudianteCorreo: raw.estudianteCorreo ?? raw.EstudianteCorreo ?? raw.correoEstudiante ?? 'postulante@uteq.edu.ec',
+      catedraId: raw.catedraId ?? raw.CatedraId ?? raw.materiaId ?? 1,
+      catedraNombre: raw.catedraNombre ?? raw.CatedraNombre ?? raw.nombreCatedra ?? raw.catedra ?? 'Cátedra de Ayudantía',
+      fecha: raw.fecha ?? raw.Fecha ?? raw.fechaPresentacion ?? new Date().toISOString(),
+      temaSilabo: raw.temaSilabo ?? raw.TemaSilabo ?? raw.tema ?? 'Sustentación de Contenido Programático del Sílabo',
+      lugarOEnlace: raw.lugarOEnlace ?? raw.LugarOEnlace ?? raw.lugar ?? 'Auditorio / Aula Virtual',
       decanoNombre: raw.decanoNombre ?? raw.DecanoNombre ?? 'Decano de Facultad',
       coordinadorNombre: raw.coordinadorNombre ?? raw.CoordinadorNombre ?? 'Coordinador de Carrera',
-      profesoresAsignados: raw.profesoresAsignados ?? raw.ProfesoresAsignados ?? [],
-      estado: raw.estado ?? raw.Estado ?? 'Pendiente',
+      profesoresAsignados: juradosList,
+      estado: raw.estado ?? raw.Estado ?? 'Convocada',
       yaEvaluadoPorMi: raw.yaEvaluadoPorMi ?? raw.YaEvaluadoPorMi ?? false,
       promedioNota: raw.promedioNota ?? raw.PromedioNota ?? raw.promedioFinal ?? raw.PromedioFinal ?? 0
     };
@@ -317,21 +355,40 @@ export class JuradoService {
   }
 
   getPresentaciones(): Observable<PresentacionDetalleDto[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/presentaciones`).pipe(
+    const urlJurado = `${this.apiUrl}/presentaciones`;
+    const urlEstudiantes = `${getApiBase()}/api/estudiantes/presentaciones`;
+    const urlAyudantias = `${getApiBase()}/api/ayudantias/presentaciones`;
+
+    return this.http.get<any[]>(urlJurado).pipe(
+      catchError(() => this.http.get<any[]>(urlEstudiantes)),
+      catchError(() => this.http.get<any[]>(urlAyudantias)),
       map(datos => {
-        if (Array.isArray(datos)) {
-          return datos.map(d => this.mapPresentacion(d));
+        const apiList = Array.isArray(datos) ? datos.map(d => this.mapPresentacion(d)) : [];
+        const localList = this.loadStorage<PresentacionDetalleDto[]>(this.STORAGE_PRESENTACIONES, this.presentacionesSubject.value) || [];
+
+        // Combinar datos del backend con presentaciones convocadas localmente para que nunca se pierdan
+        const apiAyudantiaIds = new Set(apiList.map(a => a.ayudantiaId).filter(id => id && id > 0));
+        const apiIds = new Set(apiList.map(a => a.id).filter(id => id && id > 0));
+
+        const merged = [...apiList];
+        for (const loc of localList) {
+          const yaExiste = (loc.ayudantiaId && apiAyudantiaIds.has(loc.ayudantiaId)) || apiIds.has(loc.id);
+          if (!yaExiste) {
+            merged.push(loc);
+          }
         }
-        return [];
+        return merged.length > 0 ? merged : localList;
       }),
-      tap((datos) => {
-        if (datos.length > 0) {
-          this.presentacionesSubject.next(datos);
-          this.saveStorage(this.STORAGE_PRESENTACIONES, datos);
+      tap((merged) => {
+        if (merged && merged.length > 0) {
+          this.presentacionesSubject.next(merged);
+          this.saveStorage(this.STORAGE_PRESENTACIONES, merged);
         }
       }),
-      map(() => this.presentacionesSubject.value),
-      catchError(() => of([...this.presentacionesSubject.value]))
+      catchError(() => {
+        const local = this.loadStorage<PresentacionDetalleDto[]>(this.STORAGE_PRESENTACIONES, this.presentacionesSubject.value) || [];
+        return of([...local]);
+      })
     );
   }
 
