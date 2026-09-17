@@ -1,0 +1,2461 @@
+<div class="space-y-6">
+  <!-- Cabecera Principal del Portal Docente -->
+  <div class="glass-card rounded-2xl p-6 border border-slate-200 bg-white/80 backdrop-blur shadow-sm">
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+            <i class="fa-solid fa-chalkboard-user"></i> Portal Docente Titular
+          </span>
+          <span class="text-xs text-slate-400">• Semestre 2026-2</span>
+        </div>
+        <h1 class="text-2xl font-bold text-slate-900">Gestión de Cátedras, Ayudantías y Horarios</h1>
+        <p class="text-slate-500 text-sm mt-1">
+          Supervisa tus asignaturas, orienta a tus ayudantes con el sílabo pedagógico y programa clases verificando la disponibilidad horaria de tus alumnos.
+        </p>
+      </div>
+
+      <!-- Selector de Cátedra Activa -->
+      <div class="flex items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+        <label for="selectCatedraDocente" class="text-xs font-semibold text-slate-600 whitespace-nowrap">
+          <i class="fa-solid fa-book-bookmark text-indigo-600 mr-1"></i> Cátedra:
+        </label>
+        <select id="selectCatedraDocente"
+                [ngModel]="materiaSeleccionadaId"
+                (ngModelChange)="cambiarMateriaSeleccionada($event)"
+                class="px-3 py-1.5 text-xs font-medium bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none">
+          @for (mat of materias; track mat.id) {
+            <option [value]="mat.id">{{ mat.codigo }} - {{ mat.nombre }}</option>
+          }
+        </select>
+        <button id="btnRecargarClasesDocente"
+                type="button"
+                (click)="cargarClasesDocente()"
+                [disabled]="isLoading"
+                title="Sincronizar materias y clases con el backend (/api/Docente/clases)"
+                class="px-2.5 py-1.5 text-xs font-semibold bg-white border border-slate-300 rounded-lg hover:bg-slate-100 text-slate-700 flex items-center gap-1.5 transition-colors">
+          <i class="fa-solid fa-arrows-rotate text-indigo-600" [class.animate-spin]="isLoading"></i>
+          <span class="hidden sm:inline">Actualizar</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Barra de Pestañas Principales -->
+    <div class="flex flex-wrap gap-2 mt-6 pt-4 border-t border-slate-100">
+      <button id="btnTabCatedras"
+              type="button"
+              (click)="setTab('catedras')"
+              [class]="tabActiva === 'catedras' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+              class="px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2">
+        <i class="fa-solid fa-chalkboard"></i>
+        <span>Mis Cátedras y Ayudantes</span>
+      </button>
+
+      <button id="btnTabCronograma"
+              type="button"
+              (click)="setTab('cronograma')"
+              [class]="tabActiva === 'cronograma' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+              class="px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2">
+        <i class="fa-solid fa-calendar-check"></i>
+        <span>Cronograma de Cátedra</span>
+      </button>
+
+      <button id="btnTabHorarios"
+              type="button"
+              (click)="setTab('horarios')"
+              [class]="tabActiva === 'horarios' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+              class="px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2">
+        <i class="fa-solid fa-calendar-days"></i>
+        <span>Horarios y Ocupación Alumnos</span>
+        <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+      </button>
+
+      <button id="btnTabSilabo"
+              type="button"
+              (click)="setTab('silabo')"
+              [class]="tabActiva === 'silabo' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+              class="px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2">
+        <i class="fa-solid fa-book-open-reader"></i>
+        <span>Sílabo y Guía del Ayudante</span>
+      </button>
+
+      <button id="btnTabCrearClase"
+              type="button"
+              (click)="setTab('crear-clase')"
+              [class]="tabActiva === 'crear-clase' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+              class="px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2">
+        <i class="fa-solid fa-video"></i>
+        <span>Programar Clase</span>
+      </button>
+
+      <button id="btnTabRecursos"
+              type="button"
+              (click)="setTab('recursos')"
+              [class]="tabActiva === 'recursos' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+              class="px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2">
+        <i class="fa-solid fa-folder-plus"></i>
+        <span>Recursos y Actividades</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Mensajes de Notificación y Credenciales Provisionales -->
+  @if (credencialesNotificacion.mostrar) {
+    <div class="p-4 bg-slate-900 text-white rounded-2xl border border-indigo-500/40 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in">
+      <div class="flex items-start md:items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-indigo-600/30 text-amber-300 flex items-center justify-center shrink-0 border border-indigo-500/40">
+          <i class="fa-solid fa-key text-base"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-300 bg-indigo-950/80 px-2 py-0.5 rounded border border-indigo-800/60">Credenciales de Acceso Generadas</span>
+            <span class="text-[10px] text-emerald-400 font-medium">Acceso Inmediato para Presentación</span>
+          </div>
+          <p class="text-xs md:text-sm font-bold text-white font-mono mt-1 select-all">
+            Estudiante registrado. Usuario: <span class="text-amber-300">{{ credencialesNotificacion.username }}</span> | Clave Temporal: <span class="text-emerald-300">{{ credencialesNotificacion.tempPassword }}</span>
+          </p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 self-end md:self-auto shrink-0">
+        <button type="button"
+                (click)="copiarCredenciales()"
+                class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-xs font-bold text-white transition-all flex items-center gap-1.5 shadow-xs cursor-pointer">
+          <i class="fa-regular fa-copy text-xs"></i>
+          <span>{{ copiadoCredenciales ? '¡Copiado!' : 'Copiar Credenciales' }}</span>
+        </button>
+        <button type="button"
+                (click)="cerrarCredencialesNotificacion()"
+                class="p-1.5 text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer"
+                title="Cerrar notificación">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- Mensajes generales -->
+  @if (successMessage) {
+    <div class="mb-4 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center justify-between gap-3 shadow-sm animate-fade-in">
+      <div class="flex items-center gap-3">
+        <i class="fa-solid fa-circle-check text-emerald-600"></i>
+        <span class="text-sm font-semibold">{{ successMessage }}</span>
+      </div>
+      <button
+        type="button"
+        (click)="successMessage = ''"
+        class="text-emerald-500 hover:text-emerald-700"
+        title="Cerrar mensaje">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+  }
+
+  @if (errorMessage) {
+    <div class="mb-4 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 flex items-center justify-between gap-3 shadow-sm animate-fade-in">
+      <div class="flex items-center gap-3">
+        <i class="fa-solid fa-circle-exclamation text-rose-600"></i>
+        <span class="text-sm font-semibold">{{ errorMessage }}</span>
+      </div>
+      <button
+        type="button"
+        (click)="errorMessage = ''"
+        class="text-rose-500 hover:text-rose-700"
+        title="Cerrar mensaje">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+  }
+
+  <!-- ========================================================================= -->
+  <!-- TAB 1: MIS CÁTEDRAS Y AYUDANTES ASIGNADOS                                  -->
+  <!-- ========================================================================= -->
+  @if (tabActiva === 'catedras') {
+    <div class="space-y-6">
+      <!-- Cátedra en foco -->
+      @if (materiaSeleccionada; as mat) {
+        <div class="glass-card rounded-2xl p-6 border border-slate-200 bg-white shadow-sm">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50 px-2.5 py-1 rounded-md">
+                  {{ mat.codigo }}
+                </span>
+                <span class="text-xs text-slate-500">{{ mat.semestre || '2026-2' }} • {{ mat.grupo || 'Grupo A' }}</span>
+              </div>
+              <h2 class="text-xl font-bold text-slate-900 mt-1">{{ mat.nombre }}</h2>
+              <p class="text-xs text-slate-500 mt-0.5">{{ mat.descripcion }}</p>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <button (click)="setTab('horarios')" class="px-3.5 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors flex items-center gap-1.5">
+                <i class="fa-solid fa-calendar-week text-slate-500"></i> Horarios
+              </button>
+              <a [routerLink]="['/docente/gestion-estudiantes', mat.id]" class="px-3.5 py-2 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-xl border border-blue-200 transition-colors flex items-center gap-1.5" title="Gestionar estudiantes y nómina">
+                <i class="fa-solid fa-users text-blue-600"></i> Gestionar Alumnos
+              </a>
+              <button (click)="irARevisarActividades()" class="px-3.5 py-2 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-xl border border-indigo-200 transition-colors flex items-center gap-1.5" title="Revisar y calificar actividades">
+                <i class="fa-solid fa-clipboard-check text-indigo-600"></i> Revisar Actividades
+              </button>
+              <button (click)="abrirModalSolicitudAyudante()" class="px-3.5 py-2 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl border border-emerald-200 transition-colors flex items-center gap-1.5" title="Solicitar ayudante para esta cátedra">
+                <i class="fa-solid fa-user-plus text-emerald-600"></i> Solicitar Ayudante
+              </button>
+            </div>
+          </div>
+
+          <!-- Métricas de la cátedra -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
+            <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-100">
+              <span class="text-[11px] font-semibold text-slate-400 uppercase">Estudiantes Matriculados</span>
+              <p class="text-lg font-bold text-slate-800 mt-0.5">{{ mat.estudiantes ? mat.estudiantes.length : 24 }} Alumnos</p>
+            </div>
+            <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-100">
+              <span class="text-[11px] font-semibold text-slate-400 uppercase">Ayudantes Asignados</span>
+              <p class="text-lg font-bold text-indigo-600 mt-0.5">{{ ayudantesDeMateriaActual.length }} Ayudante(s)</p>
+            </div>
+            <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-100">
+              <span class="text-[11px] font-semibold text-slate-400 uppercase">Créditos Cátedra</span>
+              <p class="text-lg font-bold text-slate-800 mt-0.5">{{ mat.creditos || 4 }} Créditos</p>
+            </div>
+            <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-100">
+              <span class="text-[11px] font-semibold text-slate-400 uppercase">Semana Lectiva</span>
+              <p class="text-lg font-bold text-slate-800 mt-0.5">Semana {{ mat.semana || 8 }} / {{ mat.totalSemanas || 16 }}</p>
+            </div>
+          </div>
+        </div>
+      }
+
+      <div *ngIf="mostrarModalSolicitudAyudante" class="fixed inset-0 bg-slate-950/45 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl w-full max-w-lg border border-slate-200 shadow-2xl">
+          <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+            <div>
+              <p class="text-[11px] font-bold uppercase tracking-wider text-emerald-600">Solicitud de ayudante</p>
+              <h3 class="text-lg font-bold text-slate-900">{{ materiaSeleccionada?.nombre }}</h3>
+            </div>
+            <button type="button" (click)="cerrarModalSolicitudAyudante()" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+          <div class="p-5 space-y-4">
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Correo del ayudante</label>
+              <input [(ngModel)]="ayudanteEmail" type="email" value="ayudante@uteq.edu.ec" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 outline-none" placeholder="ayudante@uteq.edu.ec" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-600">Motivo de la convocatoria</label>
+              <textarea [(ngModel)]="motivoSolicitud" rows="4" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 outline-none"></textarea>
+            </div>
+          </div>
+          <div class="px-5 py-4 border-t border-slate-200 flex items-center justify-end gap-2">
+            <button type="button" (click)="cerrarModalSolicitudAyudante()" class="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-600 bg-white text-xs font-semibold">Cancelar</button>
+            <button type="button" (click)="solicitarAyudante()" class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700">Enviar solicitud</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Listado de Ayudantes de Cátedra Asignados -->
+      <div class="glass-card rounded-2xl p-6 border border-slate-200 bg-white shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-graduation-cap text-indigo-600"></i>
+              Ayudantes de Cátedra a Cargo
+            </h3>
+            <p class="text-xs text-slate-500 mt-0.5">
+              Estudiantes vinculados oficialmente a esta cátedra. Orienta su labor mediante el sílabo y monitorea sus bitácoras.
+            </p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          @for (ayu of ayudantesDeMateriaActual; track ayu.id) {
+            <div class="p-5 rounded-2xl border border-slate-200 bg-slate-50/50 hover:bg-white hover:shadow-md transition-all flex flex-col justify-between">
+              <div>
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex items-center gap-3">
+                    <img [src]="ayu.avatar" [alt]="ayu.nombre" class="w-12 h-12 rounded-full object-cover border-2 border-indigo-200 shadow-sm" referrerpolicy="no-referrer" />
+                    <div>
+                      <h4 class="text-sm font-bold text-slate-900">{{ ayu.nombre }}</h4>
+                      <p class="text-xs text-slate-500">{{ ayu.correo }}</p>
+                      <span class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <i class="fa-solid fa-circle-check text-[9px]"></i> {{ ayu.estado }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Barra de horas -->
+                <div class="mt-4 pt-3 border-t border-slate-200/80">
+                  <div class="flex items-center justify-between text-xs mb-1">
+                    <span class="text-slate-500 font-medium">Horas de Ayudantía Cumplidas</span>
+                    <span class="font-bold text-slate-800">{{ ayu.horasCompletadas }} / {{ ayu.horasAsignadas }} hrs</span>
+                  </div>
+                  <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                    <div class="bg-indigo-600 h-full rounded-full transition-all duration-500"
+                         [style.width.%]="(ayu.horasCompletadas / ayu.horasAsignadas) * 100"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Acciones con el ayudante -->
+              <div class="flex items-center gap-2 mt-4 pt-3 border-t border-slate-200/80">
+                <button (click)="seleccionarAyudanteParaSilabo(ayu); setTab('silabo')"
+                        class="flex-1 py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 shadow-sm">
+                  <i class="fa-solid fa-book-open"></i> Sílabo / Plan
+                </button>
+                <button (click)="abrirMonitoreoBitacoras(ayu)"
+                        class="py-2 px-3 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
+                        title="Supervisar informes de actividades y bitácoras">
+                  <i class="fa-solid fa-file-signature text-indigo-600"></i> Informes y Bitácoras
+                </button>
+                <a [href]="'mailto:' + ayu.correo + '?subject=Instrucciones%20Cátedra%20' + materiaSeleccionada?.nombre"
+                   class="p-2 bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-xl text-xs transition-colors flex items-center justify-center"
+                   title="Contactar al Ayudante">
+                  <i class="fa-solid fa-envelope"></i>
+                </a>
+              </div>
+            </div>
+          } @empty {
+            <div class="col-span-full py-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-300">
+              <i class="fa-solid fa-user-clock text-3xl text-slate-300 mb-2"></i>
+              <p class="text-sm font-semibold text-slate-700">No hay ayudantes asignados para esta cátedra</p>
+              <p class="text-xs text-slate-400 mt-1">El coordinador académico asignará los ayudantes postulados.</p>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ========================================================================= -->
+  <!-- RF-005: REPROGRAMACIÓN DEL CRONOGRAMA DE CÁTEDRA                           -->
+  <!-- ========================================================================= -->
+  @if (tabActiva === 'cronograma') {
+    <div class="space-y-6">
+      <!-- Encabezado RF-005 -->
+      <div class="glass-card rounded-2xl p-6 border border-slate-200 bg-white shadow-sm">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200">
+                <i class="fa-solid fa-calendar-check"></i> RF-005
+              </span>
+              <span class="text-xs text-slate-400">{{ materiaSeleccionada?.nombre }}</span>
+            </div>
+            <h2 class="text-lg font-bold text-slate-900">Cronograma de Cátedra</h2>
+            <p class="text-xs text-slate-500 mt-1">
+              Registra actividades, reprograma fechas y consulta el historial individual de cada actividad.
+            </p>
+          </div>
+
+          @if (catedraSeleccionadaId) {
+            <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold">
+              <i class="fa-solid fa-circle-check"></i>
+              Cátedra sincronizada
+            </div>
+          }
+        </div>
+
+        @if (!catedraSeleccionadaId) {
+          <div class="mt-5 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm flex items-start gap-3">
+            <i class="fa-solid fa-triangle-exclamation mt-0.5"></i>
+            <div>
+              <p class="font-bold">No se pudo identificar la cátedra de la materia seleccionada.</p>
+              <p class="text-xs mt-1">Pulsa <strong>Actualizar</strong> en la parte superior para sincronizar las clases con el backend.</p>
+            </div>
+          </div>
+        } @else {
+          <div class="mt-5 rounded-2xl bg-slate-50/70 border border-slate-200 p-4">
+            <div class="flex items-center gap-2 mb-4">
+              <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                <i class="fa-solid fa-plus"></i>
+              </div>
+              <div>
+                <h3 class="text-sm font-bold text-slate-900">Nueva actividad</h3>
+                <p class="text-[11px] text-slate-500">Agrega una actividad al cronograma vigente.</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <div class="lg:col-span-2">
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Actividad</label>
+                <input type="text"
+                       [(ngModel)]="nuevaActividadCronograma.descripcion"
+                       placeholder="Ej: Presentación del primer avance del proyecto"
+                       class="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-white outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400" />
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Fecha prevista</label>
+                <input type="datetime-local"
+                       [(ngModel)]="nuevaActividadCronograma.fechaPrevista"
+                       [min]="fechaMinimaCronograma"
+                       class="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-white outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400" />
+              </div>
+            </div>
+
+            <div class="flex justify-end mt-4">
+              <button type="button"
+                      (click)="crearActividadCronograma()"
+                      [disabled]="guardandoCronograma"
+                      class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white text-xs font-bold transition-colors flex items-center gap-2">
+                <i class="fa-solid" [ngClass]="guardandoCronograma ? 'fa-spinner fa-spin' : 'fa-plus'"></i>
+                {{ guardandoCronograma ? 'Guardando...' : 'Agregar al cronograma' }}
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+
+      @if (catedraSeleccionadaId) {
+        <!-- Actividades del cronograma -->
+        <div class="glass-card rounded-2xl p-6 border border-slate-200 bg-white shadow-sm">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div>
+              <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                <i class="fa-solid fa-list-check text-indigo-600"></i>
+                Planificación actual
+              </h3>
+              <p class="text-xs text-slate-500 mt-0.5">
+                Cada actividad conserva su propio historial de reprogramaciones.
+              </p>
+            </div>
+            <span class="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full self-start sm:self-auto">
+              {{ cronogramaCatedra.length }} actividad(es)
+            </span>
+          </div>
+
+          @if (cargandoCronograma) {
+            <div class="py-10 text-center text-slate-500">
+              <i class="fa-solid fa-spinner fa-spin text-indigo-600 text-xl"></i>
+              <p class="text-xs mt-2">Cargando cronograma...</p>
+            </div>
+          } @else {
+            <div class="space-y-3">
+              @for (actividad of cronogramaCatedra; track actividad.id) {
+                <div class="rounded-2xl border border-slate-200 bg-white hover:border-indigo-200 hover:shadow-sm transition-all">
+                  <div class="p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <div class="flex items-start gap-3 min-w-0">
+                      <div class="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100">
+                        <i class="fa-solid fa-calendar-day"></i>
+                      </div>
+                      <div class="min-w-0">
+                        <div class="flex flex-wrap items-center gap-2">
+                          <h4 class="text-sm font-bold text-slate-900">{{ actividad.descripcion }}</h4>
+                          <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+                            Actividad #{{ actividad.id }}
+                          </span>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-1.5 flex items-center gap-1.5">
+                          <i class="fa-regular fa-clock text-indigo-500"></i>
+                          Fecha actual: <strong class="text-slate-700">{{ actividad.fechaPrevista | date:'dd/MM/yyyy HH:mm' }}</strong>
+                        </p>
+                      </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2 lg:justify-end shrink-0">
+                      <button type="button"
+                              (click)="abrirHistorialActividadCronograma(actividad)"
+                              class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 flex items-center gap-2">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                        Ver historial
+                      </button>
+
+                      <button type="button"
+                              (click)="iniciarReprogramacionCronograma(actividad)"
+                              class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 flex items-center gap-2">
+                        <i class="fa-solid fa-calendar-days"></i>
+                        Reprogramar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              } @empty {
+                <div class="py-10 text-center rounded-2xl border border-dashed border-slate-300 bg-slate-50">
+                  <i class="fa-regular fa-calendar-xmark text-3xl text-slate-300"></i>
+                  <p class="text-sm font-semibold text-slate-700 mt-2">Todavía no hay actividades planificadas</p>
+                  <p class="text-xs text-slate-400 mt-1">Agrega la primera actividad usando el formulario superior.</p>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Modal emergente: Reprogramar actividad -->
+    @if (mostrarModalReprogramacionCronograma && actividadCronogramaEditando) {
+      <div class="fixed inset-0 z-[100] bg-slate-950/55 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="w-full max-w-2xl bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden">
+          <div class="px-5 py-4 bg-gradient-to-r from-amber-50 to-orange-50 border-b border-amber-200 flex items-start justify-between gap-4">
+            <div class="flex items-start gap-3 min-w-0">
+              <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                <i class="fa-solid fa-calendar-days"></i>
+              </div>
+              <div class="min-w-0">
+                <p class="text-[10px] font-bold uppercase tracking-wider text-amber-700">Reprogramación del cronograma</p>
+                <h3 class="text-lg font-bold text-slate-900 truncate">{{ actividadCronogramaEditando.descripcion }}</h3>
+                <p class="text-xs text-slate-500 mt-0.5">
+                  Fecha actual: {{ actividadCronogramaEditando.fechaPrevista | date:'dd/MM/yyyy HH:mm' }}
+                </p>
+              </div>
+            </div>
+
+            <button type="button"
+                    (click)="cancelarReprogramacionCronograma()"
+                    [disabled]="guardandoCronograma"
+                    class="w-9 h-9 rounded-xl bg-white/80 hover:bg-white text-slate-500 border border-slate-200 flex items-center justify-center shrink-0">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+
+          <div class="p-5 space-y-4">
+            <div class="p-3.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-xs flex items-start gap-2.5">
+              <i class="fa-solid fa-circle-info mt-0.5"></i>
+              <p>
+                El sistema guardará automáticamente la fecha anterior, la nueva fecha y el motivo del cambio en el historial de esta actividad.
+              </p>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">Actividad</label>
+              <input type="text"
+                     [(ngModel)]="reprogramacionCronograma.descripcion"
+                     class="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-white outline-none focus:ring-2 focus:ring-amber-100 focus:border-amber-400" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">Nueva fecha</label>
+              <input type="datetime-local"
+                     [(ngModel)]="reprogramacionCronograma.fechaPrevista"
+                     [min]="fechaMinimaCronograma"
+                     class="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-white outline-none focus:ring-2 focus:ring-amber-100 focus:border-amber-400" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                Observación del cambio <span class="text-rose-500">*</span>
+              </label>
+              <textarea rows="4"
+                        [(ngModel)]="reprogramacionCronograma.observacionCambio"
+                        placeholder="Ej: Cambio de fecha por ajuste del cronograma académico"
+                        class="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-white outline-none focus:ring-2 focus:ring-amber-100 focus:border-amber-400 resize-none"></textarea>
+              <p class="text-[11px] text-slate-400 mt-1">Esta observación quedará visible en el historial de la actividad.</p>
+            </div>
+          </div>
+
+          <div class="px-5 py-4 bg-slate-50 border-t border-slate-200 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2">
+            <button type="button"
+                    (click)="cancelarReprogramacionCronograma()"
+                    [disabled]="guardandoCronograma"
+                    class="px-4 py-2.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-100">
+              Cancelar
+            </button>
+            <button type="button"
+                    (click)="guardarReprogramacionCronograma()"
+                    [disabled]="guardandoCronograma"
+                    class="px-4 py-2.5 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-700 disabled:bg-amber-300 text-white flex items-center justify-center gap-2">
+              <i class="fa-solid" [ngClass]="guardandoCronograma ? 'fa-spinner fa-spin' : 'fa-floppy-disk'"></i>
+              {{ guardandoCronograma ? 'Guardando...' : 'Guardar reprogramación' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Modal emergente: Historial individual de actividad -->
+    @if (mostrarModalHistorialCronograma && actividadHistorialCronograma) {
+      <div class="fixed inset-0 z-[110] bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="w-full max-w-3xl bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden max-h-[88vh] flex flex-col">
+          <div class="px-5 py-4 bg-gradient-to-r from-indigo-50 to-violet-50 border-b border-indigo-100 flex items-start justify-between gap-4 shrink-0">
+            <div class="flex items-start gap-3 min-w-0">
+              <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+              </div>
+              <div class="min-w-0">
+                <p class="text-[10px] font-bold uppercase tracking-wider text-indigo-700">Historial de la actividad</p>
+                <h3 class="text-lg font-bold text-slate-900 truncate">{{ actividadHistorialCronograma.descripcion }}</h3>
+                <p class="text-xs text-slate-500 mt-0.5">
+                  Fecha vigente: {{ actividadHistorialCronograma.fechaPrevista | date:'dd/MM/yyyy HH:mm' }}
+                </p>
+              </div>
+            </div>
+
+            <button type="button"
+                    (click)="cerrarHistorialActividadCronograma()"
+                    class="w-9 h-9 rounded-xl bg-white/80 hover:bg-white text-slate-500 border border-slate-200 flex items-center justify-center shrink-0"
+                    title="Cerrar historial">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+
+          <div class="px-5 py-3 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 shrink-0">
+            <div class="flex items-center gap-2 text-xs text-slate-600">
+              <i class="fa-solid fa-shield-halved text-indigo-600"></i>
+              <span>Registro permanente de reprogramaciones</span>
+            </div>
+            <span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-700">
+              {{ historialActividadCronograma.length }} cambio(s)
+            </span>
+          </div>
+
+          <div class="p-5 overflow-y-auto">
+            @if (cargandoHistorialCronograma) {
+              <div class="py-12 text-center text-slate-500">
+                <i class="fa-solid fa-spinner fa-spin text-indigo-600 text-xl"></i>
+                <p class="text-xs mt-2">Cargando historial de esta actividad...</p>
+              </div>
+            } @else {
+              <div class="space-y-4">
+                @for (cambio of historialActividadCronograma; track cambio.id; let i = $index) {
+                  <div class="relative pl-6">
+                    <div class="absolute left-1 top-1.5 bottom-[-18px] w-px bg-indigo-100"></div>
+                    <div class="absolute left-[-2px] top-1.5 w-3 h-3 rounded-full bg-indigo-600 ring-4 ring-indigo-100"></div>
+
+                    <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                        <div class="flex items-center gap-2">
+                          <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-100">
+                            Cambio {{ historialActividadCronograma.length - i }}
+                          </span>
+                          <span class="text-[11px] text-slate-400">
+                            {{ cambio.fechaModificacion | date:'dd/MM/yyyy HH:mm' }}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div class="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-3 items-stretch">
+                        <div class="p-3 rounded-xl bg-rose-50 border border-rose-100">
+                          <p class="text-[10px] font-bold uppercase tracking-wider text-rose-600 mb-1">Antes</p>
+                          <p class="text-xs font-bold text-slate-800">{{ cambio.descripcionAnterior }}</p>
+                          <p class="text-[11px] text-rose-700 mt-1.5 flex items-center gap-1">
+                            <i class="fa-regular fa-calendar"></i>
+                            {{ cambio.fechaAnterior | date:'dd/MM/yyyy HH:mm' }}
+                          </p>
+                        </div>
+
+                        <div class="hidden md:flex items-center justify-center text-slate-300 px-1">
+                          <i class="fa-solid fa-arrow-right"></i>
+                        </div>
+
+                        <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-100">
+                          <p class="text-[10px] font-bold uppercase tracking-wider text-emerald-600 mb-1">Después</p>
+                          <p class="text-xs font-bold text-slate-800">{{ cambio.descripcionNueva }}</p>
+                          <p class="text-[11px] text-emerald-700 mt-1.5 flex items-center gap-1">
+                            <i class="fa-regular fa-calendar-check"></i>
+                            {{ cambio.fechaNueva | date:'dd/MM/yyyy HH:mm' }}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div class="mt-3 p-3 rounded-xl bg-amber-50 border border-amber-100">
+                        <p class="text-[10px] font-bold uppercase tracking-wider text-amber-700 mb-1">
+                          <i class="fa-solid fa-message mr-1"></i> Motivo del cambio
+                        </p>
+                        <p class="text-xs text-slate-700">{{ cambio.observacionCambio }}</p>
+                      </div>
+                    </div>
+                  </div>
+                } @empty {
+                  <div class="py-12 text-center rounded-2xl border border-dashed border-slate-300 bg-slate-50">
+                    <div class="w-12 h-12 mx-auto rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center">
+                      <i class="fa-solid fa-clock-rotate-left text-xl"></i>
+                    </div>
+                    <p class="text-sm font-bold text-slate-700 mt-3">Esta actividad todavía no ha sido reprogramada</p>
+                    <p class="text-xs text-slate-400 mt-1">Cuando cambies su fecha o descripción, el registro aparecerá aquí.</p>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+
+          <div class="px-5 py-4 bg-slate-50 border-t border-slate-200 flex justify-end shrink-0">
+            <button type="button"
+                    (click)="cerrarHistorialActividadCronograma()"
+                    class="px-4 py-2.5 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white flex items-center gap-2">
+              <i class="fa-solid fa-check"></i>
+              Entendido
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+  }
+
+  <!-- ========================================================================= -->
+  <!-- TAB 2: HORARIOS DEL DOCENTE Y OCUPACIÓN DE ALUMNOS (DETECCIÓN CONFLICTOS)  -->
+  <!-- ========================================================================= -->
+  @if (tabActiva === 'horarios') {
+    <div class="space-y-6">
+      <!-- Explicación Didáctica de Ocupación -->
+      <div class="p-4 rounded-2xl bg-amber-50/80 border border-amber-200 text-amber-900 text-xs flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 shrink-0 text-base font-bold">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <div>
+            <span class="font-bold text-sm block">Matriz de Disponibilidad y Detección de Cruces de Horario</span>
+            <span>
+              Esta grilla muestra tus clases y las materias en que <strong>los estudiantes de este curso ya están ocupados</strong>.
+              Las franjas marcadas en rojo/ámbar están bloqueadas para que <strong>NO crees clases en esos momentos</strong> y evites colisiones de matrícula.
+            </span>
+          </div>
+        </div>
+        <button (click)="setTab('crear-clase')" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl text-xs transition-colors shrink-0 shadow-sm">
+          <i class="fa-solid fa-plus mr-1"></i> Programar Nueva Clase
+        </button>
+      </div>
+
+      <!-- Leyenda visual -->
+      <div class="flex flex-wrap items-center gap-4 bg-white p-3 rounded-xl border border-slate-200 text-xs">
+        <span class="font-semibold text-slate-700">Leyenda:</span>
+        <div class="flex items-center gap-1.5">
+          <span class="w-3 h-3 rounded bg-indigo-600"></span>
+          <span class="text-slate-600 font-medium">Clase Docente Titular</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span class="w-3 h-3 rounded bg-rose-500 border border-rose-600"></span>
+          <span class="text-rose-700 font-bold">🚫 Ocupado por Alumnos (No programar)</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span class="w-3 h-3 rounded bg-emerald-100 border border-emerald-300"></span>
+          <span class="text-emerald-700 font-medium">Franja Libre (Disponible)</span>
+        </div>
+      </div>
+
+      <!-- Matriz Horaria Interactiva -->
+      <div class="glass-card rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-sm">
+        <div class="p-4 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between">
+          <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+            <i class="fa-solid fa-calendar-days text-indigo-600"></i>
+            Grilla Semanal: {{ materiaSeleccionada?.nombre }}
+          </h3>
+          <span class="text-xs text-slate-500">Haz clic en cualquier celda verde libre para programar una clase en ese horario</span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs border-collapse">
+            <thead>
+            <tr class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+              <th class="p-3 text-left w-24 border-r border-slate-200">Horario</th>
+              @for (dia of ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']; track dia) {
+                <th class="p-3 text-center border-r border-slate-200 last:border-r-0">{{ dia }}</th>
+              }
+            </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200">
+            <!-- Bloques de horario -->
+              @for (bloque of [
+                { inicio: '08:00', fin: '10:00' },
+                { inicio: '10:00', fin: '12:00' },
+                { inicio: '12:00', fin: '14:00' },
+                { inicio: '14:00', fin: '16:00' },
+                { inicio: '16:00', fin: '18:00' }
+              ]; track bloque.inicio) {
+                <tr>
+                  <td class="p-3 font-semibold text-slate-500 bg-slate-50/80 border-r border-slate-200 whitespace-nowrap">
+                    {{ bloque.inicio }} - {{ bloque.fin }}
+                  </td>
+
+                  @for (dia of ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']; track dia) {
+                    <td class="p-2 border-r border-slate-200 last:border-r-0 h-24 align-top transition-colors">
+                      <!-- 1. Clase propia del docente -->
+                      @if (getClaseDocenteEnCelda(dia, bloque.inicio); as claseDoc) {
+                        <div class="h-full p-2.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-900 shadow-sm flex flex-col justify-between">
+                          <div>
+                            <div class="flex items-center justify-between text-[10px] font-bold text-indigo-600 uppercase">
+                              <span>Mi Clase</span>
+                              <i class="fa-solid" [ngClass]="claseDoc.tipoClase === 'Virtual' ? 'fa-wifi' : 'fa-building'"></i>
+                            </div>
+                            <span class="font-bold text-xs block truncate mt-0.5">{{ claseDoc.nombreMateria }}</span>
+                            <span class="text-[10px] text-indigo-700 block">{{ claseDoc.tipoClase }}</span>
+                          </div>
+                          <button (click)="abrirAsistencia(claseDoc.id)" class="text-[10px] font-semibold text-indigo-600 hover:underline text-left mt-1">
+                            Tomar Asistencia ({{ contarPresentes(claseDoc) }}/{{ contarTotal(claseDoc) }})
+                          </button>
+                        </div>
+                      } @else if (getOcupacionEnCelda(dia, bloque.inicio); as ocupado) {
+                        <div class="h-full p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 shadow-sm flex flex-col justify-between">
+                          <div>
+                            <div class="flex items-center gap-1 text-[10px] font-bold text-rose-600 uppercase tracking-tight">
+                              <i class="fa-solid fa-ban text-[11px]"></i> Alumnos Ocupados
+                            </div>
+                            <span class="font-bold text-xs block mt-0.5 line-clamp-2 text-rose-950">{{ ocupado.materiaOcupada }}</span>
+                          </div>
+                          <span class="inline-block text-[9px] font-medium text-rose-700 bg-rose-100/80 px-1.5 py-0.5 rounded">
+                            {{ ocupado.tipo }}
+                          </span>
+                        </div>
+                      } @else {
+                        <div (click)="seleccionarSlotHorario(dia, bloque.inicio, bloque.fin)"
+                             class="h-full p-2 rounded-xl bg-emerald-50/40 border border-dashed border-emerald-200 hover:bg-emerald-100/60 hover:border-emerald-400 cursor-pointer text-emerald-800 flex flex-col items-center justify-center text-center transition-all group">
+                          <i class="fa-solid fa-circle-plus text-emerald-500 text-sm group-hover:scale-110 transition-transform mb-1"></i>
+                          <span class="text-[11px] font-semibold text-emerald-700">Disponible</span>
+                          <span class="text-[9px] text-emerald-600/80">Clic para programar</span>
+                        </div>
+                      }
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ========================================================================= -->
+  <!-- TAB 3: SÍLABO Y GUÍA DIDÁCTICA PARA EL AYUDANTE (BACKEND ALIGNED)           -->
+  <!-- ========================================================================= -->
+  @if (tabActiva === 'silabo') {
+    <div class="space-y-6">
+      <!-- Selector de Ayudante para orientar -->
+      <div class="glass-card rounded-2xl p-6 border border-slate-200 bg-white shadow-sm">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-book-open-reader text-indigo-600"></i>
+              Sílabo y Directrices de Enseñanza para el Ayudante
+            </h3>
+            <p class="text-xs text-slate-500 mt-1">
+              Define semana a semana qué temas, ejercicios prácticos y directrices pedagógicas debe impartir el ayudante de cátedra a los alumnos.
+            </p>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <span class="text-xs font-semibold text-slate-600">Ayudante en Guía:</span>
+            <select [ngModel]="ayudanteSeleccionado?.id"
+                    (ngModelChange)="seleccionarAyudanteParaSilabo(ayudantesCatedra[$event - 1])"
+                    class="px-3 py-1.5 text-xs font-semibold bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-accent/20">
+              @for (a of ayudantesDeMateriaActual; track a.id) {
+                <option [value]="a.id">{{ a.nombre }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <!-- Formulario para Agregar Tema/Directriz al Sílabo -->
+        <div class="mt-5 p-5 bg-slate-50/70 rounded-2xl border border-slate-200">
+          <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-plus-circle text-indigo-600"></i>
+            Agregar Nueva Directriz de Enseñanza al Sílabo
+          </h4>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Semana del Semestre</label>
+              <select [(ngModel)]="nuevaActividadSilabo.semana" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-white outline-none">
+                @for (sem of [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]; track sem) {
+                  <option [value]="sem">Semana {{ sem }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="md:col-span-2">
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Tema a Enseñar por el Ayudante</label>
+              <input type="text"
+                     [(ngModel)]="nuevaActividadSilabo.tema"
+                     placeholder="Ej: Derivadas Parciales, Límites o Integrales de Línea"
+                     class="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-white outline-none focus:ring-2 focus:ring-accent/20" />
+            </div>
+
+            <div class="md:col-span-2">
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Directrices Pedagógicas del Docente para el Ayudante</label>
+              <textarea [(ngModel)]="nuevaActividadSilabo.directrices"
+                        rows="2"
+                        placeholder="Ej: Explicar en pizarra los ejercicios pares de la Guía 2. Atender dudas individuales y reforzar conceptos previos."
+                        class="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-white outline-none focus:ring-2 focus:ring-accent/20"></textarea>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Recursos Sugeridos</label>
+              <input type="text"
+                     [(ngModel)]="nuevaActividadSilabo.recursosSugeridos"
+                     placeholder="Ej: Guía de Ejercicios N° 3, Simulador 3D"
+                     class="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-white outline-none focus:ring-2 focus:ring-accent/20" />
+            </div>
+          </div>
+
+          <div class="flex justify-end mt-4">
+            <button (click)="agregarActividadAlSilabo()"
+                    [disabled]="isLoading"
+                    class="py-2 px-5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-colors shadow-sm flex items-center gap-2">
+              <i class="fa-solid fa-floppy-disk"></i> Guardar en Sílabo del Ayudante
+            </button>
+          </div>
+        </div>
+
+        <!-- Lista del Sílabo / Plan de Enseñanza Actual -->
+        <div class="mt-6">
+          <div class="flex items-center justify-between mb-3">
+            <h4 class="text-sm font-bold text-slate-900">
+              Cronograma de Contenidos a Impartir por {{ ayudanteSeleccionado?.nombre || 'el Ayudante' }}
+            </h4>
+            <span class="text-xs text-slate-500 font-medium">
+              Total temas planificados: {{ planificacionSilabo.length }}
+            </span>
+          </div>
+
+          <div class="space-y-3">
+            @for (act of planificacionSilabo; track act.id) {
+              <div class="p-4 rounded-xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4"
+                   [ngClass]="act.completada ? 'bg-emerald-50/40 border-emerald-200' : 'bg-white border-slate-200 shadow-sm'">
+                <div class="flex items-start gap-3">
+                  <button (click)="toggleCumplimientoSilabo(act)"
+                          class="mt-1 w-5 h-5 rounded-md flex items-center justify-center border transition-colors shrink-0"
+                          [ngClass]="act.completada ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-slate-300 text-transparent hover:border-emerald-500'">
+                    <i class="fa-solid fa-check text-xs"></i>
+                  </button>
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <span class="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                            [ngClass]="act.completada ? 'bg-emerald-100 text-emerald-800' : 'bg-indigo-50 text-indigo-700 border border-indigo-100'">
+                        Semana {{ act.semana || 1 }}
+                      </span>
+                      <h5 class="text-xs font-bold text-slate-900" [ngClass]="{'line-through text-slate-400': act.completada}">
+                        {{ act.tema || act.descripcion }}
+                      </h5>
+                    </div>
+                    @if (act.directrices) {
+                      <p class="text-xs text-slate-600 mt-1">
+                        <strong>Directriz docente:</strong> {{ act.directrices }}
+                      </p>
+                    }
+                    @if (act.recursosSugeridos) {
+                      <span class="inline-flex items-center gap-1 text-[11px] text-slate-500 mt-1">
+                        <i class="fa-solid fa-paperclip text-slate-400"></i> {{ act.recursosSugeridos }}
+                      </span>
+                    }
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-2 self-end md:self-center shrink-0">
+                  <span class="text-xs font-semibold px-2.5 py-1 rounded-full"
+                        [ngClass]="act.completada ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'">
+                    {{ act.completada ? 'Impartido por Ayudante' : 'Pendiente de Enseñar' }}
+                  </span>
+                  <button (click)="eliminarActividadSilabo(act.id)" class="p-1.5 text-slate-400 hover:text-rose-600 transition-colors" title="Eliminar del sílabo">
+                    <i class="fa-solid fa-trash-can"></i>
+                  </button>
+                </div>
+              </div>
+            } @empty {
+              <div class="py-8 text-center bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                <i class="fa-solid fa-book-open text-2xl text-slate-300 mb-1"></i>
+                <p class="text-xs font-semibold text-slate-700">No hay temas agregados al sílabo de este ayudante aún</p>
+                <p class="text-[11px] text-slate-400">Utiliza el formulario superior para añadir las pautas semanales.</p>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ========================================================================= -->
+  <!-- TAB 4: PROGRAMAR NUEVA CLASE (CON DETECCIÓN EN TIEMPO REAL DE CONFLICTOS)  -->
+  <!-- ========================================================================= -->
+  @if (tabActiva === 'crear-clase') {
+    <div class="space-y-6">
+      <!-- Banner de Detección de Conflicto -->
+      @if (conflictoDetectado) {
+        <div class="p-4 rounded-2xl bg-rose-50 border-2 border-rose-300 text-rose-900 shadow-sm flex items-start gap-3 animate-pulse">
+          <div class="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 shrink-0 text-base font-bold">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+          </div>
+          <div>
+            <h4 class="text-sm font-bold text-rose-950">
+              ⚠️ CONFLICTO DE HORARIO DETECTADO CON LOS ALUMNOS
+            </h4>
+            <p class="text-xs mt-1 text-rose-800">
+              Los estudiantes de esta cátedra ya están ocupados los <strong>{{ conflictoDetectado.dia }}s de {{ conflictoDetectado.horaInicio }} a {{ conflictoDetectado.horaFin }}</strong> en la materia <strong>'{{ conflictoDetectado.materiaOcupada }}'</strong> ({{ conflictoDetectado.tipo }}).
+            </p>
+            <p class="text-[11px] font-semibold text-rose-700 mt-1">
+              Recomendación: Cambia el día o la hora para evitar cruces en el horario de los alumnos.
+            </p>
+          </div>
+        </div>
+      } @else {
+        <div class="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 flex items-center gap-3 text-xs shadow-sm">
+          <i class="fa-solid fa-circle-check text-emerald-600 text-base"></i>
+          <div>
+            <span class="font-bold">Horario Verificado:</span>
+            <span class="text-emerald-800"> Ningún alumno de este grupo presenta cruces de horario en la franja seleccionada.</span>
+          </div>
+        </div>
+      }
+
+      <!-- Formulario Crear Clase -->
+      <section class="glass-card rounded-2xl p-6 border border-slate-200 bg-white shadow-sm">
+        <h3 class="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
+          <i class="fa-solid fa-calendar-plus text-indigo-600"></i> Programar Nueva Sesión de Clase
+        </h3>
+
+        <form (ngSubmit)="guardarClase()" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Materia -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Materia / Cátedra</label>
+            <select [(ngModel)]="nuevaClase.materiaId"
+                    (ngModelChange)="cambiarMateriaSeleccionada($event)"
+                    name="materiaId"
+                    required
+                    class="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none bg-white font-medium">
+              @for (m of materias; track m.id) {
+                <option [value]="m.id">{{ m.codigo }} - {{ m.nombre }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- Fecha de la sesión -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Fecha de la sesión</label>
+            <input type="date"
+                   [(ngModel)]="nuevaClase.fecha"
+                   (ngModelChange)="revisarConflictoHorario()"
+                   name="fecha"
+                   required
+                   class="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none bg-white" />
+          </div>
+
+          <!-- Días de la semana -->
+          <div class="col-span-1 md:col-span-2">
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Días de la semana</label>
+            <div class="flex flex-wrap gap-2">
+              @for (dia of ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado']; track dia) {
+                <label class="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs cursor-pointer transition-colors"
+                       [ngClass]="nuevaClase.diasSeleccionados.includes(dia) ? 'bg-indigo-50 border-indigo-300 text-indigo-900 font-bold' : 'bg-slate-50 border-slate-200 text-slate-600'">
+                  <input type="checkbox"
+                         [value]="dia"
+                         (change)="toggleDia($event)"
+                         [checked]="nuevaClase.diasSeleccionados.includes(dia)"
+                         class="accent-indigo-600" />
+                  <span>{{ dia }}</span>
+                </label>
+              }
+            </div>
+          </div>
+
+          <!-- Hora Inicio -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Hora Inicio</label>
+            <input type="time"
+                   [(ngModel)]="nuevaClase.horaInicio"
+                   (ngModelChange)="revisarConflictoHorario()"
+                   name="horaInicio"
+                   required
+                   class="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none bg-white" />
+          </div>
+
+          <!-- Hora Fin -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Hora Fin</label>
+            <input type="time"
+                   [(ngModel)]="nuevaClase.horaFin"
+                   (ngModelChange)="revisarConflictoHorario()"
+                   name="horaFin"
+                   required
+                   class="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none bg-white" />
+          </div>
+
+          <!-- Tipo de Clase (Virtual / Presencial) -->
+          <div class="col-span-1 md:col-span-2">
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Modalidad de Clase</label>
+            <div class="flex gap-4">
+              <label class="flex items-center gap-2 cursor-pointer text-xs font-semibold">
+                <input type="radio" [(ngModel)]="nuevaClase.tipoClase" name="tipoClase" value="Virtual" class="accent-indigo-600" />
+                <span><i class="fa-solid fa-wifi text-indigo-600 mr-1"></i> Virtual</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer text-xs font-semibold">
+                <input type="radio" [(ngModel)]="nuevaClase.tipoClase" name="tipoClase" value="Presencial" class="accent-indigo-600" />
+                <span><i class="fa-solid fa-building text-indigo-600 mr-1"></i> Presencial</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Campos Virtuales -->
+          @if (nuevaClase.tipoClase === 'Virtual') {
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Plataforma</label>
+              <input type="text" [(ngModel)]="nuevaClase.aplicacionVirtual" name="aplicacionVirtual" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg outline-none" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Enlace de Videollamada</label>
+              <input type="url" [(ngModel)]="nuevaClase.linkVirtual" name="linkVirtual" placeholder="https://meet.google.com/..." class="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg outline-none" />
+            </div>
+          }
+
+          <!-- Campos Presenciales -->
+          @if (nuevaClase.tipoClase === 'Presencial') {
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Edificio</label>
+              <input type="text" [(ngModel)]="nuevaClase.edificioPresencial" name="edificioPresencial" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg outline-none" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Aula</label>
+              <input type="text" [(ngModel)]="nuevaClase.aulaPresencial" name="aulaPresencial" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg outline-none" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Piso</label>
+              <input type="text" [(ngModel)]="nuevaClase.pisoPresencial" name="pisoPresencial" placeholder="Ej. Piso 2" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg outline-none" />
+            </div>
+          }
+
+          <!-- Observaciones -->
+          <div class="col-span-1 md:col-span-2">
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Observaciones</label>
+            <textarea [(ngModel)]="nuevaClase.observaciones"
+                      name="observaciones"
+                      rows="3"
+                      placeholder="Indicaciones adicionales para la sesión (opcional)"
+                      class="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none bg-white resize-y"></textarea>
+          </div>
+
+          <!-- Botón Guardar -->
+          <div class="col-span-1 md:col-span-2 flex justify-end mt-2">
+            <button type="submit"
+                    [class]="conflictoDetectado ? 'bg-amber-600 hover:bg-amber-700' : 'bg-indigo-600 hover:bg-indigo-700'"
+                    class="py-2.5 px-6 text-white text-xs font-bold rounded-xl transition-colors shadow-sm flex items-center gap-2">
+              <i class="fa-solid" [ngClass]="conflictoDetectado ? 'fa-triangle-exclamation' : 'fa-calendar-check'"></i>
+              {{ conflictoDetectado ? 'Programar con Advertencia' : 'Confirmar y Crear Clase' }}
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Listado de Clases Creadas -->
+      <section class="glass-card rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-sm">
+        <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between">
+          <h3 class="text-sm font-bold text-slate-900">Sesiones de Clase Programadas</h3>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs">
+            <thead>
+            <tr class="text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-200 bg-slate-50/50">
+              <th class="text-left font-semibold px-6 py-3">Materia</th>
+              <th class="text-left font-semibold px-4 py-3">Días</th>
+              <th class="text-left font-semibold px-4 py-3">Horario</th>
+              <th class="text-left font-semibold px-4 py-3">Modalidad</th>
+              <th class="text-center font-semibold px-4 py-3">Asistencia</th>
+              <th class="text-right font-semibold px-6 py-3">Acciones</th>
+            </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200">
+              @for (clase of clasesCreadas; track clase.id) {
+                <tr class="hover:bg-slate-50 transition-colors">
+                  <td class="px-6 py-4 font-bold text-slate-900">{{ clase.nombreMateria }}</td>
+                  <td class="px-4 py-4 text-slate-600">{{ clase.dias.join(', ') }}</td>
+                  <td class="px-4 py-4 text-slate-600 font-medium">{{ clase.horaInicio }} - {{ clase.horaFin }}</td>
+                  <td class="px-4 py-4">
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold"
+                        [ngClass]="clase.tipoClase === 'Virtual' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'">
+                    <i class="fa-solid" [ngClass]="clase.tipoClase === 'Virtual' ? 'fa-wifi' : 'fa-location-dot'"></i>
+                    {{ clase.tipoClase }}
+                  </span>
+                  </td>
+                  <td class="px-4 py-4 text-center">
+                  <span class="text-xs font-bold text-slate-700">
+                    {{ contarPresentes(clase) }}/{{ contarTotal(clase) }}
+                  </span>
+                  </td>
+                  <td class="px-6 py-4 text-right">
+                    <button (click)="abrirAsistencia(clase.id)" class="text-xs text-indigo-600 hover:text-indigo-800 font-bold hover:underline">
+                      Tomar Asistencia
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  }
+
+  <!-- ========================================================================= -->
+  <!-- TAB 5: RECURSOS Y ACTIVIDADES PEDAGÓGICAS (OPCIONES DEL AYUDANTE / DOCENTE)-->
+  <!-- ========================================================================= -->
+  @if (tabActiva === 'recursos') {
+    <div class="space-y-6">
+      <!-- Subtabs Recursos vs Actividades -->
+      <div class="flex items-center gap-2 border-b border-slate-200 pb-3">
+        <button
+          (click)="subTabRecursos = 'recursos'"
+          [class]="subTabRecursos === 'recursos' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+          class="px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2">
+          <i class="fa-solid fa-file-lines"></i>
+          Recursos Pedagógicos
+        </button>
+
+        <button
+          (click)="subTabRecursos = 'actividades'; actualizarRecursosYActividades()"
+          [class]="subTabRecursos === 'actividades' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+          class="px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2">
+          <i class="fa-solid fa-list-check"></i>
+          Actividades y Talleres
+        </button>
+
+        <button
+          (click)="abrirSubTabDiagnostica()"
+          [class]="subTabRecursos === 'diagnostica' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+          class="px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2">
+
+          <i class="fa-solid fa-stethoscope"></i>
+          Evaluación Diagnóstica
+        </button>
+      </div>
+
+      <!-- Subsección Recursos -->
+      @if (subTabRecursos === 'recursos') {
+        <div class="space-y-6">
+          <div class="glass-card rounded-2xl p-6 border border-slate-200 bg-white shadow-sm">
+            <h3 class="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
+              <i class="fa-solid fa-cloud-arrow-up text-indigo-600"></i> Publicar Recurso Pedagógico
+            </h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="md:col-span-2">
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Título del Recurso</label>
+                <input type="text" [(ngModel)]="nuevoRecurso.titulo" placeholder="Ej: Guía Práctica de Derivadas Vectoriales" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg outline-none" />
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Tipo de Recurso</label>
+                <select [(ngModel)]="nuevoRecurso.tipo" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg outline-none bg-white">
+                  <option value="PDF">Documento PDF</option>
+                  <option value="Video">Video Explicativo</option>
+                  <option value="Simulador">Simulador Interactivo</option>
+                  <option value="Enlace">Enlace Externo</option>
+                </select>
+              </div>
+
+              <div class="md:col-span-2">
+                <label class="block text-xs font-semibold text-slate-700 mb-1">URL o Enlace del Archivo (Opcional si sube archivo)</label>
+                <input type="url" [(ngModel)]="nuevoRecurso.url" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg outline-none" />
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Tema del Sílabo</label>
+                <input type="text" [(ngModel)]="nuevoRecurso.temaNombre" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg outline-none" />
+              </div>
+
+              <!-- Carga de Archivo Adjunto (Docente/Ayudante) -->
+              <div class="md:col-span-3">
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Subir Archivo / Guía de Cátedra (PDF, DOCX, ZIP, Imagen)</label>
+                <div class="flex items-center gap-3">
+                  <label class="cursor-pointer px-4 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-xs font-semibold text-slate-700 flex items-center gap-2 transition-colors">
+                    <i class="fa-solid fa-cloud-arrow-up text-indigo-600"></i>
+                    <span>{{ archivoRecurso ? 'Cambiar archivo' : 'Examinar archivo...' }}</span>
+                    <input type="file" (change)="onArchivoRecursoChange($event)" class="hidden" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.rar,.png,.jpg,.jpeg" />
+                  </label>
+                  @if (archivoRecurso) {
+                    <div class="flex items-center gap-2 bg-indigo-50 border border-indigo-200 text-indigo-800 px-3 py-1.5 rounded-lg text-xs">
+                      <i class="fa-solid fa-paperclip"></i>
+                      <span class="font-medium max-w-xs truncate">{{ archivoRecurso.nombre }} ({{ archivoRecurso.tamanoKb }} KB)</span>
+                      <button (click)="quitarArchivoRecurso()" class="text-rose-500 hover:text-rose-700 ml-1" title="Quitar archivo">
+                        <i class="fa-solid fa-xmark"></i>
+                      </button>
+                    </div>
+                  }
+                </div>
+              </div>
+
+              <div class="md:col-span-3">
+                <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                  <input type="checkbox" [(ngModel)]="nuevoRecurso.esEsencial" class="accent-indigo-600" />
+                  <span>Marcar como Recurso Esencial (Obligatorio para la materia)</span>
+                </label>
+
+                <!-- Links adicionales -->
+                <div class="mt-2">
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Enlaces relacionados (uno por línea o separados por comas)</label>
+                  <textarea [(ngModel)]="nuevoRecurso.linksString" rows="2" placeholder="https://youtu.be/..., https://ejemplo.edu/recurso" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none text-xs"></textarea>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 mt-3">
+                  <button (click)="crearRecursoPedagogico()" class="py-2 px-5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-colors shadow-sm flex items-center gap-2">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> Publicar Recurso
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Listado de Recursos -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            @for (rec of recursosMateria; track rec.id) {
+              <div class="p-4 rounded-xl border border-slate-200 bg-white shadow-sm flex items-start justify-between gap-3">
+                <div class="flex items-start gap-3">
+                  <div class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                       [ngClass]="rec.tipo === 'PDF' ? 'bg-rose-50 text-rose-600' : rec.tipo === 'Video' ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'">
+                    <i class="fa-solid" [ngClass]="rec.tipo === 'PDF' ? 'fa-file-pdf' : rec.tipo === 'Video' ? 'fa-play' : 'fa-flask'"></i>
+                  </div>
+                  <div>
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                      <h4 class="text-xs font-bold text-slate-900">{{ rec.titulo }}</h4>
+                      @if (rec.esEsencial) {
+                        <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                          Esencial
+                        </span>
+                      }
+                      @if (rec.nombreArchivo) {
+                        <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1">
+                          <i class="fa-solid fa-paperclip"></i> Adjunto
+                        </span>
+                      }
+                    </div>
+                    <p class="text-[11px] text-slate-500 mt-0.5">{{ rec.descripcion || rec.temaNombre }}</p>
+
+                    <div class="flex items-center gap-3 mt-2">
+                      <a [href]="rec.url" target="_blank" class="text-[11px] text-indigo-600 hover:underline font-medium inline-flex items-center gap-1">
+                        Abrir enlace <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
+                      </a>
+                      <button (click)="descargarRecursoDocumento(rec)" class="text-[11px] text-emerald-700 hover:text-emerald-800 font-bold inline-flex items-center gap-1 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded">
+                        <i class="fa-solid fa-download text-[9px]"></i> Descargar archivo
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <button (click)="eliminarRecurso(rec.id)" class="text-slate-400 hover:text-rose-600 p-1" title="Eliminar recurso">
+                  <i class="fa-solid fa-trash-can text-xs"></i>
+                </button>
+              </div>
+            } @empty {
+              <div class="col-span-full py-8 text-center bg-slate-50 rounded-xl border border-dashed border-slate-300 text-xs text-slate-500">
+                No hay recursos registrados aún para esta cátedra.
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- ========================================================= -->
+      <!-- ACTIVIDADES Y TALLERES - RF-017 -->
+      <!-- ========================================================= -->
+      @if (subTabRecursos === 'actividades') {
+        <div class="space-y-6">
+          <div class="glass-card rounded-2xl p-6 border border-slate-200 bg-white shadow-sm">
+            <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3 mb-5">
+              <div>
+                <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <i class="fa-solid fa-list-check text-indigo-600"></i>
+                  Crear Actividad o Taller
+                </h3>
+                <p class="text-xs text-slate-500 mt-1">
+                  La actividad quedará asociada a la materia seleccionada y disponible para sus estudiantes.
+                </p>
+              </div>
+              <button
+                type="button"
+                (click)="actualizarRecursosYActividades()"
+                class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors inline-flex items-center gap-2">
+                <i class="fa-solid fa-rotate"></i>
+                Actualizar
+              </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="md:col-span-2">
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Título de la actividad</label>
+                <input
+                  type="text"
+                  [(ngModel)]="nuevaActividad.titulo"
+                  placeholder="Ej: Taller de estructura de informes técnicos"
+                  class="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400" />
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Tipo</label>
+                <select
+                  [(ngModel)]="nuevaActividad.tipo"
+                  class="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg outline-none bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400">
+                  <option value="Taller">Taller</option>
+                  <option value="Tarea">Tarea</option>
+                  <option value="Practica">Práctica</option>
+                  <option value="Investigacion">Investigación</option>
+                  <option value="Proyecto">Proyecto</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Fecha límite</label>
+                <input
+                  type="datetime-local"
+                  [(ngModel)]="nuevaActividad.fechaEntrega"
+                  class="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400" />
+              </div>
+
+              <div class="md:col-span-2">
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Descripción / instrucciones</label>
+                <textarea
+                  [(ngModel)]="nuevaActividad.descripcion"
+                  rows="3"
+                  placeholder="Describe qué debe realizar el estudiante..."
+                  class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none text-xs focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400"></textarea>
+              </div>
+
+              <div class="md:col-span-3 flex items-center justify-end">
+                <button
+                  type="button"
+                  (click)="crearActividadPedagogica()"
+                  [disabled]="isLoading"
+                  class="py-2.5 px-5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl transition-colors shadow-sm flex items-center gap-2">
+                  <i class="fa-solid fa-plus"></i>
+                  {{ isLoading ? 'Guardando...' : 'Publicar Actividad' }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="glass-card rounded-2xl p-5 border border-slate-200 bg-white shadow-sm">
+            <div class="flex items-center justify-between gap-3 mb-4">
+              <div>
+                <h3 class="text-sm font-bold text-slate-900">Actividades publicadas</h3>
+                <p class="text-xs text-slate-500 mt-1">Información cargada desde el backend para la materia seleccionada.</p>
+              </div>
+              <span class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-100">
+                {{ actividadesMateria.length }} actividad(es)
+              </span>
+            </div>
+
+            <div class="space-y-3">
+              @for (act of actividadesMateria; track act.id) {
+                <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-white transition-colors">
+                  <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                    <div class="flex items-start gap-3 min-w-0">
+                      <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-clipboard-list"></i>
+                      </div>
+
+                      <div class="min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                          <h4 class="text-sm font-bold text-slate-900">{{ act.titulo }}</h4>
+                          <span class="text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100">
+                            {{ act.tipo || 'Actividad' }}
+                          </span>
+                          <span class="text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-100">
+                            {{ act.estado || 'Pendiente' }}
+                          </span>
+                        </div>
+
+                        <p class="text-xs text-slate-600 mt-1 leading-relaxed">
+                          {{ act.descripcion || 'Sin descripción.' }}
+                        </p>
+
+                        <div class="flex items-center gap-4 flex-wrap mt-3 text-[11px] text-slate-500">
+                          <span class="inline-flex items-center gap-1.5">
+                            <i class="fa-regular fa-calendar text-indigo-500"></i>
+                            Fecha límite: {{ act.fechaEntrega | date:'dd/MM/yyyy HH:mm' }}
+                          </span>
+                          <span class="inline-flex items-center gap-1.5">
+                            <i class="fa-solid fa-book text-indigo-500"></i>
+                            {{ materiaSeleccionada?.nombre || 'Materia' }}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        (click)="descargarActividadDocumento(act)"
+                        class="px-3 py-2 text-[11px] font-bold rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors inline-flex items-center gap-1.5">
+                        <i class="fa-solid fa-download"></i>
+                        Guía
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              } @empty {
+                <div class="py-10 text-center bg-slate-50 rounded-xl border border-dashed border-slate-300 text-xs text-slate-500">
+                  <i class="fa-solid fa-clipboard-list text-2xl text-slate-300 mb-2"></i>
+                  <p class="font-semibold text-slate-600">No hay actividades registradas aún para esta materia.</p>
+                  <p class="mt-1">Crea la primera actividad usando el formulario superior.</p>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- ========================================================= -->
+      <!-- EVALUACIÓN DIAGNÓSTICA - RF-004 -->
+      <!-- ========================================================= -->
+      @if (subTabRecursos === 'diagnostica') {
+        <div class="space-y-5">
+          <div class="glass-card rounded-2xl p-5 border border-slate-200 bg-white shadow-sm">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <div class="flex items-center gap-2 mb-1">
+                  <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center">
+                    <i class="fa-solid fa-stethoscope"></i>
+                  </div>
+                  <div>
+                    <h3 class="text-sm font-bold text-slate-900">Evaluaciones Diagnósticas</h3>
+                    <p class="text-xs text-slate-500">Crea, revisa y califica diagnósticos sin recargar toda la página con formularios.</p>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                (click)="abrirModalCrearEvaluacionDiagnostica()"
+                class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm transition-colors inline-flex items-center justify-center gap-2">
+                <i class="fa-solid fa-plus"></i>
+                Nueva evaluación diagnóstica
+              </button>
+            </div>
+          </div>
+
+          <div class="glass-card rounded-2xl p-5 border border-slate-200 bg-white shadow-sm">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+              <div>
+                <h3 class="text-sm font-bold text-slate-900">Evaluaciones registradas</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Pulsa “Revisar” para abrir las entregas en una ventana, como el expediente del estudiante.</p>
+              </div>
+              <span class="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg">
+                {{ evaluacionesDiagnosticas.length }}
+                {{ evaluacionesDiagnosticas.length === 1 ? 'evaluación' : 'evaluaciones' }}
+              </span>
+            </div>
+
+            @if (evaluacionesDiagnosticas.length > 0) {
+              <div class="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                @for (evaluacion of evaluacionesDiagnosticas; track evaluacion.id) {
+                  <div class="rounded-xl border border-slate-200 bg-white p-4 hover:border-indigo-300 hover:shadow-sm transition-all">
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                          <i class="fa-solid text-indigo-600"
+                             [ngClass]="evaluacion.tipoEvaluacion === 'Cuestionario' ? 'fa-list-check' : 'fa-file-arrow-up'"></i>
+                          <h4 class="text-xs font-bold text-slate-900 truncate">{{ evaluacion.nombre }}</h4>
+                          <span class="text-[9px] font-bold uppercase px-2 py-0.5 rounded-full"
+                                [ngClass]="evaluacion.tipoEvaluacion === 'Cuestionario'
+                                  ? 'bg-violet-50 text-violet-700 border border-violet-200'
+                                  : 'bg-blue-50 text-blue-700 border border-blue-200'">
+                            {{ evaluacion.tipoEvaluacion }}
+                          </span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 mt-1 line-clamp-2">
+                          {{ evaluacion.instrucciones || 'Sin instrucciones adicionales.' }}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 mt-3 text-[10px] text-slate-500">
+                      <div class="bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-2">
+                        <i class="fa-solid fa-calendar-day text-indigo-500 mr-1"></i>
+                        {{ evaluacion.fechaInicio ? (evaluacion.fechaInicio | date:'dd/MM/yyyy HH:mm') : 'Sin inicio' }}
+                      </div>
+                      <div class="bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-2">
+                        <i class="fa-solid fa-calendar-check text-indigo-500 mr-1"></i>
+                        {{ evaluacion.fechaFin ? (evaluacion.fechaFin | date:'dd/MM/yyyy HH:mm') : 'Sin fin' }}
+                      </div>
+                    </div>
+
+                    <div class="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
+                      <span class="text-[10px] text-emerald-700 font-semibold">
+                        <i class="fa-solid fa-shield-heart mr-1"></i>No afecta el promedio
+                      </span>
+                      <button
+                        type="button"
+                        (click)="seleccionarEvaluacionDiagnostica(evaluacion)"
+                        class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold transition-colors">
+                        <i class="fa-solid fa-eye mr-1"></i> Revisar
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+            } @else {
+              <div class="py-10 text-center bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                <i class="fa-solid fa-clipboard-question text-3xl text-slate-300 mb-2"></i>
+                <p class="text-sm font-semibold text-slate-700">No hay evaluaciones diagnósticas registradas</p>
+                <p class="text-xs text-slate-400 mt-1">Usa “Nueva evaluación diagnóstica” para crear la primera.</p>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+    </div>
+  }
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: CREAR EVALUACIÓN DIAGNÓSTICA                                       -->
+<!-- ========================================================================= -->
+@if (mostrarModalCrearDiagnostica) {
+  <div class="fixed inset-0 bg-black/45 backdrop-blur-xs flex items-center justify-center z-60 p-3 sm:p-5"
+       (click)="cerrarModalCrearEvaluacionDiagnostica()">
+    <div class="bg-white rounded-2xl w-full max-w-3xl shadow-2xl border border-slate-200 max-h-[92vh] flex flex-col animate-scale-in"
+         (click)="$event.stopPropagation()">
+
+      <div class="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-3 shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center">
+            <i class="fa-solid fa-stethoscope"></i>
+          </div>
+          <div>
+            <p class="text-[10px] font-bold uppercase tracking-wider text-indigo-600">RF-004</p>
+            <h3 class="text-base font-bold text-slate-900">Nueva Evaluación Diagnóstica</h3>
+            <p class="text-xs text-slate-500 mt-0.5">La calificación se registra sobre 10 y no afecta el promedio.</p>
+          </div>
+        </div>
+
+        <button type="button"
+                (click)="cerrarModalCrearEvaluacionDiagnostica()"
+                class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-5 overflow-y-auto flex-1">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="md:col-span-2">
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Nombre de la evaluación</label>
+            <input type="text"
+                   [(ngModel)]="nuevaEvaluacionDiagnostica.nombre"
+                   placeholder="Ej: Diagnóstico inicial de Redacción Técnica"
+                   class="w-full px-3 py-2.5 text-xs border border-slate-200 rounded-xl outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" />
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Instrucciones</label>
+            <textarea [(ngModel)]="nuevaEvaluacionDiagnostica.instrucciones"
+                      rows="3"
+                      placeholder="Indica qué debe realizar el estudiante..."
+                      class="w-full px-3 py-2.5 text-xs border border-slate-200 rounded-xl outline-none resize-y focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"></textarea>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Modalidad</label>
+            <select [ngModel]="nuevaEvaluacionDiagnostica.tipoEvaluacion"
+                    (ngModelChange)="cambiarTipoEvaluacionDiagnostica($event)"
+                    class="w-full px-3 py-2.5 text-xs border border-slate-200 rounded-xl bg-white outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
+              <option value="Archivo">Entrega de archivo</option>
+              <option value="Cuestionario">Cuestionario en el sistema</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Material del docente (URL opcional)</label>
+            <input type="text"
+                   [(ngModel)]="nuevaEvaluacionDiagnostica.archivoDocenteUrl"
+                   placeholder="/uploads/... o https://..."
+                   class="w-full px-3 py-2.5 text-xs border border-slate-200 rounded-xl outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Fecha y hora de inicio</label>
+            <input type="datetime-local"
+                   [(ngModel)]="nuevaEvaluacionDiagnostica.fechaInicio"
+                   class="w-full px-3 py-2.5 text-xs border border-slate-200 rounded-xl bg-white outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Fecha y hora de finalización</label>
+            <input type="datetime-local"
+                   [(ngModel)]="nuevaEvaluacionDiagnostica.fechaFin"
+                   class="w-full px-3 py-2.5 text-xs border border-slate-200 rounded-xl bg-white outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" />
+          </div>
+
+          @if (nuevaEvaluacionDiagnostica.tipoEvaluacion === 'Cuestionario') {
+            <div class="md:col-span-2 rounded-2xl border border-violet-200 bg-violet-50/40 p-4">
+              <div class="flex items-center justify-between gap-3 mb-3">
+                <div>
+                  <h4 class="text-xs font-bold text-slate-900">Preguntas del cuestionario</h4>
+                  <p class="text-[11px] text-slate-500 mt-0.5">Agrega las preguntas que responderá el estudiante.</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-1 rounded-lg bg-white border border-violet-200 text-violet-700">
+                  {{ preguntasNuevaEvaluacion.length }}
+                </span>
+              </div>
+
+              <div class="flex flex-col sm:flex-row gap-2">
+                <input type="text"
+                       [(ngModel)]="nuevaPreguntaCuestionario"
+                       (keyup.enter)="agregarPreguntaDiagnostica()"
+                       placeholder="Escribe una pregunta..."
+                       class="flex-1 px-3 py-2 text-xs border border-slate-200 rounded-xl bg-white outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100" />
+                <button type="button"
+                        (click)="agregarPreguntaDiagnostica()"
+                        class="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold">
+                  <i class="fa-solid fa-plus mr-1"></i> Agregar
+                </button>
+              </div>
+
+              <div class="mt-3 space-y-2 max-h-52 overflow-y-auto pr-1">
+                @for (pregunta of preguntasNuevaEvaluacion; track pregunta.id; let i = $index) {
+                  <div class="flex items-start gap-3 p-3 rounded-xl bg-white border border-slate-200">
+                    <span class="w-6 h-6 rounded-md bg-violet-100 text-violet-700 flex items-center justify-center text-[10px] font-bold shrink-0">{{ i + 1 }}</span>
+                    <p class="flex-1 text-xs text-slate-700 pt-0.5">{{ pregunta.pregunta }}</p>
+                    <button type="button"
+                            (click)="eliminarPreguntaDiagnostica(i)"
+                            class="w-7 h-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50">
+                      <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                  </div>
+                } @empty {
+                  <div class="py-5 text-center border border-dashed border-violet-200 rounded-xl bg-white/70 text-[11px] text-slate-400">
+                    Aún no hay preguntas agregadas.
+                  </div>
+                }
+              </div>
+            </div>
+          } @else {
+            <div class="md:col-span-2 p-3.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-xs flex items-start gap-2">
+              <i class="fa-solid fa-file-arrow-up mt-0.5"></i>
+              <span>El estudiante podrá entregar PDF, Word, ZIP o imagen dentro del período configurado.</span>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="px-5 py-4 border-t border-slate-100 bg-slate-50/70 flex items-center justify-between gap-3 shrink-0">
+        <div class="text-[11px] text-emerald-700 font-semibold">
+          <i class="fa-solid fa-shield-heart mr-1"></i> Sin ponderación académica
+        </div>
+        <div class="flex items-center gap-2">
+          <button type="button"
+                  (click)="cerrarModalCrearEvaluacionDiagnostica()"
+                  class="px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-xs font-semibold hover:bg-slate-100">
+            Cancelar
+          </button>
+          <button type="button"
+                  (click)="crearEvaluacionDiagnostica()"
+                  [disabled]="isLoading"
+                  class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white text-xs font-bold shadow-sm">
+            {{ isLoading ? 'Registrando...' : 'Crear evaluación' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ========================================================================= -->
+<!-- MODAL: REVISAR RESPUESTAS / ENTREGAS DIAGNÓSTICAS                         -->
+<!-- ========================================================================= -->
+@if (mostrarModalRevisionDiagnostica && evaluacionDiagnosticaSeleccionada) {
+  <div class="fixed inset-0 bg-black/45 backdrop-blur-xs flex items-center justify-center z-60 p-3 sm:p-5"
+       (click)="cerrarModalRevisionDiagnostica()">
+    <div class="bg-white rounded-2xl w-full max-w-6xl shadow-2xl border border-slate-200 max-h-[92vh] flex flex-col animate-scale-in"
+         (click)="$event.stopPropagation()">
+
+      <div class="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-4 shrink-0">
+        <div class="min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-indigo-600">Evaluación Diagnóstica</p>
+            <span class="text-[9px] font-bold px-2 py-0.5 rounded-full"
+                  [ngClass]="evaluacionDiagnosticaSeleccionada.tipoEvaluacion === 'Cuestionario'
+                    ? 'bg-violet-100 text-violet-700'
+                    : 'bg-blue-100 text-blue-700'">
+              {{ evaluacionDiagnosticaSeleccionada.tipoEvaluacion }}
+            </span>
+            <span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+              No afecta el promedio
+            </span>
+          </div>
+          <h3 class="text-base font-bold text-slate-900 mt-1 truncate">{{ evaluacionDiagnosticaSeleccionada.nombre }}</h3>
+          <p class="text-xs text-slate-500 mt-0.5 line-clamp-1">{{ evaluacionDiagnosticaSeleccionada.instrucciones || 'Sin instrucciones adicionales.' }}</p>
+        </div>
+
+        <button type="button"
+                (click)="cerrarModalRevisionDiagnostica()"
+                class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center shrink-0">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      @if (cargandoResultadosDiagnosticos) {
+        <div class="flex-1 min-h-80 flex flex-col items-center justify-center text-slate-500">
+          <i class="fa-solid fa-spinner fa-spin text-3xl text-indigo-600 mb-3"></i>
+          <p class="text-xs font-semibold">Cargando entregas...</p>
+        </div>
+      } @else {
+        @if (resultadosDiagnosticosFormulario.length > 0) {
+          <div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)]">
+
+            <!-- Lista de estudiantes -->
+            <aside class="border-r border-slate-200 bg-slate-50/70 min-h-0 overflow-y-auto">
+              <div class="p-3 border-b border-slate-200 bg-white sticky top-0 z-10">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Entregas recibidas</span>
+                  <span class="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-full px-2 py-0.5">
+                    {{ resultadosDiagnosticosFormulario.length }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="p-2 space-y-1.5">
+                @for (resultado of resultadosDiagnosticosFormulario; track resultado.estudianteId) {
+                  <button type="button"
+                          (click)="seleccionarResultadoDiagnostico(resultado)"
+                          class="w-full text-left p-3 rounded-xl border transition-all"
+                          [ngClass]="resultadoDiagnosticoSeleccionado?.estudianteId === resultado.estudianteId
+                            ? 'bg-indigo-50 border-indigo-300 shadow-sm'
+                            : 'bg-white border-slate-200 hover:border-indigo-200 hover:bg-indigo-50/40'">
+                    <div class="flex items-center gap-2.5">
+                      <div class="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[11px] font-bold shrink-0">
+                        {{ resultado.nombreEstudiante.substring(0, 2).toUpperCase() }}
+                      </div>
+                      <div class="min-w-0 flex-1">
+                        <p class="text-xs font-bold text-slate-900 truncate">{{ resultado.nombreEstudiante }}</p>
+                        <div class="flex items-center gap-1.5 mt-1">
+                          <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                                [ngClass]="resultado.estado === 'Calificado'
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                  : 'bg-amber-50 text-amber-700 border border-amber-200'">
+                            {{ resultado.estado }}
+                          </span>
+                          @if (resultado.calificacion !== null) {
+                            <span class="text-[10px] font-bold text-slate-600">{{ resultado.calificacion }} / 10</span>
+                          }
+                        </div>
+                      </div>
+                      <i class="fa-solid fa-chevron-right text-[10px] text-slate-300"></i>
+                    </div>
+                  </button>
+                }
+              </div>
+            </aside>
+
+            <!-- Ficha de la entrega seleccionada -->
+            <section class="min-h-0 overflow-y-auto p-5 bg-white">
+              @if (resultadoDiagnosticoSeleccionado; as resultado) {
+                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 pb-4 border-b border-slate-100">
+                  <div>
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Estudiante</p>
+                    <h4 class="text-base font-bold text-slate-900 mt-0.5">{{ resultado.nombreEstudiante }}</h4>
+                    @if (resultado.fechaEntrega) {
+                      <p class="text-[11px] text-slate-500 mt-1">
+                        <i class="fa-solid fa-clock mr-1 text-slate-400"></i>
+                        Entregado: {{ resultado.fechaEntrega | date:'dd/MM/yyyy HH:mm' }}
+                      </p>
+                    }
+                  </div>
+                  <span class="text-[10px] font-bold px-2.5 py-1 rounded-full self-start"
+                        [ngClass]="resultado.estado === 'Calificado'
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : 'bg-amber-50 text-amber-700 border border-amber-200'">
+                    {{ resultado.estado }}
+                  </span>
+                </div>
+
+                <div class="mt-5">
+                  @if (evaluacionDiagnosticaSeleccionada.tipoEvaluacion === 'Archivo') {
+                    <div class="rounded-2xl border border-blue-200 bg-blue-50/50 p-4">
+                      <h5 class="text-xs font-bold text-slate-900 mb-2">
+                        <i class="fa-solid fa-file-arrow-up text-blue-600 mr-1"></i> Archivo entregado
+                      </h5>
+                      @if (resultado.archivoEntregaUrl) {
+                        <button type="button"
+                                (click)="abrirArchivoEntrega(resultado)"
+                                class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold inline-flex items-center gap-2">
+                          <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                          Abrir archivo del estudiante
+                        </button>
+                      } @else {
+                        <p class="text-xs text-slate-400">No existe archivo adjunto.</p>
+                      }
+                    </div>
+                  } @else {
+                    <div>
+                      <div class="flex items-center justify-between gap-3 mb-3">
+                        <h5 class="text-xs font-bold text-slate-900">
+                          <i class="fa-solid fa-list-check text-violet-600 mr-1"></i> Respuestas del cuestionario
+                        </h5>
+                        <span class="text-[10px] text-slate-500">
+                          {{ obtenerRespuestasCuestionario(resultado).length }} respuestas
+                        </span>
+                      </div>
+
+                      <div class="space-y-3">
+                        @for (respuesta of obtenerRespuestasCuestionario(resultado); track respuesta.preguntaId; let i = $index) {
+                          <div class="rounded-xl border border-violet-100 bg-violet-50/40 p-4">
+                            <div class="flex items-start gap-2">
+                              <span class="w-6 h-6 rounded-md bg-violet-100 text-violet-700 flex items-center justify-center text-[10px] font-bold shrink-0">{{ i + 1 }}</span>
+                              <div class="min-w-0">
+                                <p class="text-xs font-bold text-violet-900">{{ obtenerTextoPregunta(respuesta.preguntaId) }}</p>
+                                <p class="text-xs text-slate-700 mt-2 whitespace-pre-line leading-relaxed">{{ respuesta.respuesta || 'Sin respuesta.' }}</p>
+                              </div>
+                            </div>
+                          </div>
+                        } @empty {
+                          <div class="py-8 text-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-xs text-slate-400">
+                            No se encontraron respuestas.
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+
+                <div class="mt-5 pt-5 border-t border-slate-100 grid grid-cols-1 md:grid-cols-[160px_minmax(0,1fr)] gap-4">
+                  <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Calificación</label>
+                    <div class="relative">
+                      <input type="number"
+                             min="0"
+                             max="10"
+                             step="0.01"
+                             [(ngModel)]="resultado.calificacion"
+                             placeholder="0 - 10"
+                             class="w-full px-3 py-2.5 pr-10 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-indigo-200" />
+                      <span class="absolute right-3 top-2.5 text-[10px] text-slate-400 font-bold">/10</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Observación / retroalimentación</label>
+                    <textarea [(ngModel)]="resultado.observacion"
+                              rows="3"
+                              placeholder="Ej: Buen dominio de los conceptos iniciales..."
+                              class="w-full px-3 py-2.5 text-xs border border-slate-200 rounded-xl outline-none resize-y focus:ring-2 focus:ring-indigo-200"></textarea>
+                  </div>
+                </div>
+              } @else {
+                <div class="h-full min-h-72 flex flex-col items-center justify-center text-center text-slate-400">
+                  <i class="fa-solid fa-user-check text-3xl mb-2"></i>
+                  <p class="text-xs font-semibold">Selecciona un estudiante para revisar su entrega.</p>
+                </div>
+              }
+            </section>
+          </div>
+
+          <div class="px-5 py-3.5 border-t border-slate-200 bg-slate-50/70 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 shrink-0">
+            <div class="flex flex-wrap items-center gap-2">
+              @if (resumenEvaluacionDiagnostica && resumenEvaluacionDiagnostica.estudiantesEvaluados > 0) {
+                <span class="text-[10px] font-semibold px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-600">
+                  Evaluados: <strong>{{ resumenEvaluacionDiagnostica.estudiantesEvaluados }}</strong>
+                </span>
+                <span class="text-[10px] font-semibold px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-600">
+                  Promedio: <strong>{{ resumenEvaluacionDiagnostica.promedioDiagnostico | number:'1.0-2' }}/10</strong>
+                </span>
+                <span class="text-[10px] font-semibold px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-600">
+                  Mín: <strong>{{ resumenEvaluacionDiagnostica.calificacionMinima | number:'1.0-2' }}</strong>
+                </span>
+                <span class="text-[10px] font-semibold px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-600">
+                  Máx: <strong>{{ resumenEvaluacionDiagnostica.calificacionMaxima | number:'1.0-2' }}</strong>
+                </span>
+              } @else {
+                <span class="text-[10px] text-slate-500">Sin calificaciones registradas todavía.</span>
+              }
+            </div>
+
+            <div class="flex items-center justify-end gap-2">
+              <button type="button"
+                      (click)="cerrarModalRevisionDiagnostica()"
+                      class="px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-xs font-semibold hover:bg-slate-100">
+                Cerrar
+              </button>
+              <button type="button"
+                      (click)="guardarResultadosDiagnosticos()"
+                      [disabled]="guardandoResultadosDiagnosticos || resultadosDiagnosticosFormulario.length === 0"
+                      class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-400 text-white text-xs font-bold shadow-sm">
+                <i class="fa-solid fa-floppy-disk mr-1"></i>
+                {{ guardandoResultadosDiagnosticos ? 'Guardando...' : 'Guardar calificaciones' }}
+              </button>
+            </div>
+          </div>
+        } @else {
+          <div class="flex-1 min-h-80 flex flex-col items-center justify-center text-center p-8">
+            <div class="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center text-xl mb-3">
+              <i class="fa-solid fa-inbox"></i>
+            </div>
+            <p class="text-sm font-bold text-slate-700">Aún no hay entregas de estudiantes</p>
+            <p class="text-xs text-slate-400 mt-1 max-w-md">Cuando los estudiantes envíen el archivo o respondan el cuestionario, aparecerán aquí para su revisión y calificación.</p>
+          </div>
+          <div class="px-5 py-3.5 border-t border-slate-200 bg-slate-50/70 flex justify-end shrink-0">
+            <button type="button"
+                    (click)="cerrarModalRevisionDiagnostica()"
+                    class="px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-xs font-semibold hover:bg-slate-100">
+              Cerrar
+            </button>
+          </div>
+        }
+      }
+    </div>
+  </div>
+}
+
+<!-- ========================================================================= -->
+<!-- MODAL DE ASISTENCIA (OPTIMIZADO PARA 20+ ESTUDIANTES)                     -->
+<!-- ========================================================================= -->
+@if (claseAsistenciaId !== null) {
+  <div class="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-3 sm:p-5" (click)="cerrarAsistencia()">
+    <div class="bg-white rounded-2xl p-5 sm:p-6 w-full max-w-4xl shadow-2xl border border-slate-200 animate-scale-in max-h-[92vh] flex flex-col" (click)="$event.stopPropagation()">
+
+      <!-- Encabezado del Modal -->
+      <div class="flex items-start justify-between pb-4 border-b border-slate-100 shrink-0">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-0.5 rounded-md bg-accent/10 text-accent font-bold text-xs">
+              {{ getClaseById(claseAsistenciaId)?.tipoClase || 'Sesión' }}
+            </span>
+            <span class="text-xs text-slate-400 font-medium">
+              {{ getClaseById(claseAsistenciaId)?.dias?.join(', ') || getClaseById(claseAsistenciaId)?.fecha }} {{ getClaseById(claseAsistenciaId)?.horaInicio }} - {{ getClaseById(claseAsistenciaId)?.horaFin }}
+            </span>
+          </div>
+          <h3 class="text-lg font-bold text-slate-900 mt-1">
+            Control de Asistencia: {{ getClaseById(claseAsistenciaId)?.nombreMateria }}
+          </h3>
+          <p class="text-xs text-slate-500">Pasa lista de forma rápida. Compatible con grupos de 20 a 50 estudiantes.</p>
+        </div>
+        <button (click)="cerrarAsistencia()" class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      @if (getClaseById(claseAsistenciaId); as clase) {
+        <!-- Barra de Métricas y Progreso en Vivo -->
+        <div class="py-3 px-4 bg-slate-50 rounded-xl border border-slate-200/80 my-3 shrink-0 space-y-2">
+          <div class="flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div class="flex items-center gap-3 font-semibold">
+              <span class="text-slate-600">Total: <strong class="text-slate-900">{{ contarTotal(clase) }} alumnos</strong></span>
+              <span class="text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-full border border-emerald-200">
+                <i class="fa-solid fa-circle-check text-[11px] mr-1"></i>{{ contarPresentes(clase) }} Presentes
+              </span>
+              <span class="text-rose-700 bg-rose-100/70 px-2 py-0.5 rounded-full border border-rose-200">
+                <i class="fa-solid fa-circle-xmark text-[11px] mr-1"></i>{{ contarTotal(clase) - contarPresentes(clase) }} Ausentes
+              </span>
+            </div>
+
+            <span class="font-bold text-sm" [ngClass]="(contarPresentes(clase) / (contarTotal(clase) || 1)) >= 0.8 ? 'text-emerald-600' : 'text-amber-600'">
+              {{ Math.round((contarPresentes(clase) / (contarTotal(clase) || 1)) * 100) }}% Asistencia
+            </span>
+          </div>
+
+          <!-- Barra de Progreso Visual -->
+          <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+            <div class="h-full bg-emerald-500 transition-all duration-300 rounded-full"
+                 [style.width.%]="Math.round((contarPresentes(clase) / (contarTotal(clase) || 1)) * 100)"></div>
+          </div>
+        </div>
+
+        <!-- Barra de Herramientas: Búsqueda, Filtros y Acciones en Lote -->
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 mb-3 shrink-0">
+          <!-- Búsqueda en vivo -->
+          <div class="relative flex-1 max-w-sm">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+            <input type="text"
+                   [(ngModel)]="busquedaEstudianteAsistencia"
+                   placeholder="Buscar alumno por nombre o correo..."
+                   class="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-accent/20 transition-all" />
+          </div>
+
+          <!-- Filtros de Estado -->
+          <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl shrink-0 text-xs">
+            <button (click)="filtroEstadoAsistencia = 'todos'"
+                    class="px-2.5 py-1 rounded-lg font-medium transition-all"
+                    [ngClass]="filtroEstadoAsistencia === 'todos' ? 'bg-white text-slate-900 shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-800'">
+              Todos ({{ contarTotal(clase) }})
+            </button>
+            <button (click)="filtroEstadoAsistencia = 'presentes'"
+                    class="px-2.5 py-1 rounded-lg font-medium transition-all"
+                    [ngClass]="filtroEstadoAsistencia === 'presentes' ? 'bg-white text-emerald-700 shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-800'">
+              Presentes ({{ contarPresentes(clase) }})
+            </button>
+            <button (click)="filtroEstadoAsistencia = 'ausentes'"
+                    class="px-2.5 py-1 rounded-lg font-medium transition-all"
+                    [ngClass]="filtroEstadoAsistencia === 'ausentes' ? 'bg-white text-rose-700 shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-800'">
+              Ausentes ({{ contarTotal(clase) - contarPresentes(clase) }})
+            </button>
+          </div>
+
+          <!-- Acciones Rápidas en Lote (1-Click) -->
+          <div class="flex items-center gap-1.5 shrink-0 flex-wrap">
+            <button (click)="abrirAgregarEstudianteAClase()"
+                    class="px-2.5 py-1.5 text-xs font-semibold bg-indigo-50 text-indigo-800 hover:bg-indigo-100 border border-indigo-200 rounded-xl transition-colors flex items-center gap-1"
+                    title="Añadir estudiante a esta clase">
+              <i class="fa-solid fa-user-plus text-indigo-600"></i> Añadir Estudiante
+            </button>
+            <button (click)="marcarTodosAsistencia(clase.id, true)"
+                    class="px-2.5 py-1.5 text-xs font-semibold bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition-colors flex items-center gap-1"
+                    title="Marcar a todos como presentes">
+              <i class="fa-solid fa-check-double text-emerald-600"></i> Todos Presentes
+            </button>
+            <button (click)="marcarTodosAsistencia(clase.id, false)"
+                    class="px-2.5 py-1.5 text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-rose-50 hover:text-rose-700 border border-slate-200 rounded-xl transition-colors flex items-center gap-1"
+                    title="Desmarcar asistencia">
+              <i class="fa-solid fa-xmark"></i> Todos Ausentes
+            </button>
+            <button (click)="invertirAsistencia(clase.id)"
+                    class="p-1.5 text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200 rounded-xl transition-colors"
+                    title="Invertir asistencia">
+              <i class="fa-solid fa-repeat"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Cuadrícula Optimizada de Alumnos (2 Columnas) -->
+        <div class="flex-1 overflow-y-auto pr-1">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+            @for (estudiante of getEstudiantesFiltradosAsistencia(clase); track estudiante.id) {
+              <div class="flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer select-none"
+                   (click)="toggleAsistencia(claseAsistenciaId, estudiante.id)"
+                   [ngClass]="estudiante.presente ? 'bg-emerald-50/40 border-emerald-200 hover:bg-emerald-50/70' : 'bg-white border-slate-200 hover:bg-slate-50'">
+
+                <div class="flex items-center gap-3 min-w-0">
+                  <!-- Avatar con Iniciales -->
+                  <div class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 transition-colors"
+                       [ngClass]="estudiante.presente ? 'bg-emerald-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-600 border border-slate-200'">
+                    {{ estudiante.nombre.substring(0, 2).toUpperCase() }}
+                  </div>
+
+                  <div class="min-w-0">
+                    <p class="text-xs font-bold text-slate-900 truncate leading-tight">{{ estudiante.nombre }}</p>
+                    <p class="text-[11px] text-slate-400 truncate">{{ estudiante.correo || 'alumno@universidad.edu' }}</p>
+                    <span class="inline-block text-[10px] font-semibold text-slate-500 mt-0.5">
+                      Histórico: {{ calcularPorcentajeAsistencia(estudiante.id, clase.materiaId) }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Botones de Acción de Estudiante -->
+                <div class="flex items-center gap-1.5 shrink-0" (click)="$event.stopPropagation()">
+                  <!-- Botón de Alternancia de Asistencia -->
+                  <button type="button"
+                          (click)="toggleAsistencia(claseAsistenciaId, estudiante.id)"
+                          class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all border shrink-0 flex items-center gap-1.5 shadow-2xs"
+                          [ngClass]="estudiante.presente ? 'bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700' : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'">
+                    <i class="fa-solid" [ngClass]="estudiante.presente ? 'fa-check' : 'fa-xmark text-slate-400'"></i>
+                    <span>{{ estudiante.presente ? 'Presente' : 'Ausente' }}</span>
+                  </button>
+
+                  <!-- Botón Eliminar (Papelera) - DELETE /api/Clase/{claseId}/estudiantes/{estudianteId} -->
+                  <button type="button"
+                          (click)="eliminarEstudiante(clase.id, estudiante.id, $event)"
+                          class="w-8 h-8 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 flex items-center justify-center transition-colors shrink-0"
+                          title="Eliminar estudiante de la clase">
+                    <i class="fa-solid fa-trash-can text-xs"></i>
+                  </button>
+                </div>
+              </div>
+            } @empty {
+              <div class="col-span-1 md:col-span-2 py-8 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                <i class="fa-solid fa-users-slash text-2xl text-slate-300 mb-1"></i>
+                <p class="text-xs font-semibold text-slate-700">No se encontraron estudiantes con los filtros aplicados</p>
+                <p class="text-[11px] text-slate-400">Intenta borrar el texto de búsqueda o cambiar el filtro de estado.</p>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Pie del Modal con Guardar / Cerrar -->
+      <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between shrink-0">
+        <span class="text-xs text-slate-500 font-medium">
+          <i class="fa-solid fa-cloud-arrow-up text-emerald-600 mr-1"></i>
+          Los cambios se sincronizan en tiempo real con el servidor.
+        </span>
+        <button (click)="cerrarAsistencia()"
+                class="py-2 px-6 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors shadow-xs">
+          Completar y Guardar Asistencia
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Sub-Modal: Agregar Estudiante a la Clase -->
+  @if (mostrarModalAgregarEstudiante) {
+    <div class="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-60 p-4" (click)="cerrarAgregarEstudianteAClase()">
+      <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl border border-slate-200 p-6 space-y-4 animate-scale-in" (click)="$event.stopPropagation()">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs font-bold">
+              <i class="fa-solid fa-user-plus"></i>
+            </div>
+            <div>
+              <h4 class="text-sm font-bold text-slate-900">Añadir Estudiante a la Clase</h4>
+              <p class="text-[11px] text-slate-500">Se registrará en el aula y en el Directorio Institucional</p>
+            </div>
+          </div>
+          <button (click)="cerrarAgregarEstudianteAClase()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <div class="space-y-3">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-600 mb-1">Nombre y Apellidos *</label>
+            <input type="text"
+                   [(ngModel)]="nuevoEstudianteClase.nombre"
+                   placeholder="Ej: Daniel Mera Santos"
+                   class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-300 focus:bg-white outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-bold text-slate-600 mb-1">Correo Institucional *</label>
+            <input type="email"
+                   [(ngModel)]="nuevoEstudianteClase.correo"
+                   placeholder="Ej: d.mera@uteq.edu.ec"
+                   class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-300 focus:bg-white outline-none" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-[11px] font-bold text-slate-600 mb-1">Cédula</label>
+              <input type="text"
+                     [(ngModel)]="nuevoEstudianteClase.cedula"
+                     placeholder="1728394012"
+                     class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-300 focus:bg-white outline-none" />
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-600 mb-1">Matrícula</label>
+              <input type="text"
+                     [(ngModel)]="nuevoEstudianteClase.matricula"
+                     placeholder="2024-IS-401"
+                     class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-300 focus:bg-white outline-none" />
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+          <button type="button"
+                  (click)="cerrarAgregarEstudianteAClase()"
+                  class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors">
+            Cancelar
+          </button>
+          <button type="button"
+                  (click)="guardarEstudianteEnClase(claseAsistenciaId)"
+                  class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-check"></i>
+            <span>Registrar y Asignar</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+}
+
+<!-- ========================================================================= -->
+<!-- MODAL: MONITOREO DE BITÁCORAS DEL AYUDANTE (BACKEND ALIGNED)              -->
+<!-- ========================================================================= -->
+@if (modalBitacorasAbierto) {
+  <div class="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4" (click)="cerrarMonitoreoBitacoras()">
+    <div class="bg-white rounded-2xl w-full max-w-3xl shadow-2xl border border-slate-200 animate-scale-in flex flex-col max-h-[90vh]" (click)="$event.stopPropagation()">
+      <!-- HEADER -->
+      <div class="flex items-center justify-between p-5 pb-4 border-b border-slate-100">
+        <div class="flex items-center gap-3">
+          <img [src]="ayudanteSeleccionado?.avatar" class="w-12 h-12 rounded-full object-cover border border-slate-200 shadow-2xs" referrerpolicy="no-referrer" />
+          <div>
+            <h3 class="text-base font-bold text-slate-900 leading-tight">Supervisión: {{ ayudanteSeleccionado?.nombre }}</h3>
+            <span class="text-xs text-slate-500">Informes mensuales de cumplimiento, bitácoras probatorias y validación de horas</span>
+          </div>
+        </div>
+        <button (click)="cerrarMonitoreoBitacoras()" class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- TABS DE MONITOREO -->
+      <div class="flex items-center gap-2 px-5 pt-3 border-b border-slate-100 bg-slate-50/50">
+        <button
+          type="button"
+          (click)="tabMonitoreo = 'informes'"
+          class="pb-2.5 px-3 text-xs font-bold transition-all border-b-2 flex items-center gap-2 cursor-pointer"
+          [class.border-indigo-600]="tabMonitoreo === 'informes'"
+          [class.text-indigo-600]="tabMonitoreo === 'informes'"
+          [class.border-transparent]="tabMonitoreo !== 'informes'"
+          [class.text-slate-500]="tabMonitoreo !== 'informes'"
+        >
+          <i class="fa-solid fa-file-contract"></i>
+          Informes de Rendición
+          <span class="px-1.5 py-0.5 rounded-full text-[10px] font-bold"
+                [class.bg-indigo-100]="tabMonitoreo === 'informes'"
+                [class.text-indigo-700]="tabMonitoreo === 'informes'"
+                [class.bg-slate-200]="tabMonitoreo !== 'informes'"
+                [class.text-slate-600]="tabMonitoreo !== 'informes'">
+            {{ informesAyudanteActual.length }}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          (click)="tabMonitoreo = 'bitacoras'"
+          class="pb-2.5 px-3 text-xs font-bold transition-all border-b-2 flex items-center gap-2 cursor-pointer"
+          [class.border-indigo-600]="tabMonitoreo === 'bitacoras'"
+          [class.text-indigo-600]="tabMonitoreo === 'bitacoras'"
+          [class.border-transparent]="tabMonitoreo !== 'bitacoras'"
+          [class.text-slate-500]="tabMonitoreo !== 'bitacoras'"
+        >
+          <i class="fa-solid fa-calendar-check"></i>
+          Bitácoras de Asistencia
+          <span class="px-1.5 py-0.5 rounded-full text-[10px] font-bold"
+                [class.bg-indigo-100]="tabMonitoreo === 'bitacoras'"
+                [class.text-indigo-700]="tabMonitoreo === 'bitacoras'"
+                [class.bg-slate-200]="tabMonitoreo !== 'bitacoras'"
+                [class.text-slate-600]="tabMonitoreo !== 'bitacoras'">
+            {{ monitoreoAyudanteActual?.bitacoras?.length || 0 }}
+          </span>
+        </button>
+      </div>
+
+      <!-- CONTENIDO CON SCROLL -->
+      <div class="p-5 overflow-y-auto flex-1 space-y-4">
+        <!-- TAB 1: INFORMES DE RENDICIÓN -->
+        @if (tabMonitoreo === 'informes') {
+          @for (inf of informesAyudanteActual; track inf.id) {
+            <div class="p-4.5 rounded-2xl border border-slate-200 bg-white hover:border-slate-300 transition-all shadow-2xs space-y-3">
+              <!-- Encabezado de la tarjeta -->
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-bold text-xs shrink-0">
+                    <i class="fa-solid fa-stamp"></i>
+                  </div>
+                  <div>
+                    <span class="text-xs font-mono font-bold text-slate-900">{{ inf.numeroResolucion }}</span>
+                    <span class="text-slate-400 text-xs mx-1.5">•</span>
+                    <span class="text-xs font-medium text-slate-600">{{ inf.periodo }}</span>
+                  </div>
+                </div>
+
+                <!-- Estado del informe -->
+                <div>
+                  @if (inf.estado === 'Aprobado por Docente') {
+                    <span class="px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold rounded-xl inline-flex items-center gap-1.5">
+                      <i class="fa-solid fa-circle-check text-emerald-600"></i> Aprobado por Docente
+                    </span>
+                  } @else {
+                    <span class="px-2.5 py-1 bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-bold rounded-xl inline-flex items-center gap-1.5">
+                      <i class="fa-solid fa-clock text-amber-600"></i> Pendiente de Aprobación
+                    </span>
+                  }
+                </div>
+              </div>
+
+              <!-- Ficha de métricas del informe -->
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 p-2.5 bg-slate-50 rounded-xl text-xs">
+                <div>
+                  <span class="text-slate-400 block text-[10px]">Horas Impartidas</span>
+                  <span class="font-bold text-slate-800">{{ inf.horasTotales }} horas</span>
+                </div>
+                <div>
+                  <span class="text-slate-400 block text-[10px]">Frecuencia</span>
+                  <span class="font-bold text-slate-800">{{ inf.diasPorSemana }} días / semana</span>
+                </div>
+                <div>
+                  <span class="text-slate-400 block text-[10px]">Modalidad</span>
+                  <span class="font-bold text-slate-800">{{ inf.modalidad }}</span>
+                </div>
+                <div>
+                  <span class="text-slate-400 block text-[10px]">Fecha de Registro</span>
+                  <span class="font-bold text-slate-800">{{ inf.fechaCreacion }}</span>
+                </div>
+              </div>
+
+              <!-- Contenido Temático -->
+              <div class="bg-slate-50/70 p-3 rounded-xl border border-slate-100">
+                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Actividades y Temas Impartidos</span>
+                <p class="text-xs text-slate-700 leading-relaxed">{{ inf.temasImpartidos }}</p>
+              </div>
+
+              <!-- Anexos y comprobantes -->
+              @if (inf.anexos && inf.anexos.length > 0) {
+                <div>
+                  <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Evidencias Probatorias Adjuntas</span>
+                  <div class="flex flex-wrap gap-2">
+                    @for (anx of inf.anexos; track anx.id) {
+                      <div class="px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 flex items-center gap-2">
+                        <i class="fa-solid fa-file-pdf text-rose-500 text-xs"></i>
+                        <span class="truncate max-w-[200px]">{{ anx.nombre }}</span>
+                        <span class="text-[10px] text-slate-400">({{ anx.tamanoKb }} KB)</span>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+
+              <!-- Barra de acciones del docente -->
+              <div class="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+                <div class="text-[11px] text-slate-400">
+                  <i class="fa-solid fa-building-columns mr-1"></i> Cumplimiento Normativo RF-009 UTEQ
+                </div>
+
+                <div class="flex items-center gap-2">
+                  @if (inf.estado !== 'Aprobado por Docente') {
+                    <button
+                      type="button"
+                      (click)="aprobarInformeAyudante(inf)"
+                      class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                      title="Emitir aprobación y firma docente"
+                    >
+                      <i class="fa-solid fa-signature"></i> Aprobar y Firmar
+                    </button>
+                  }
+                  <button
+                    type="button"
+                    (click)="descargarInformeAyudante(inf)"
+                    class="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
+                    title="Descargar informe institucional oficial"
+                  >
+                    <i class="fa-solid fa-download text-indigo-600"></i> Descargar
+                  </button>
+                  <button
+                    type="button"
+                    (click)="imprimirInformeAyudante(inf)"
+                    class="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
+                    title="Imprimir o guardar como PDF"
+                  >
+                    <i class="fa-solid fa-print text-slate-500"></i> Imprimir / PDF
+                  </button>
+                </div>
+              </div>
+            </div>
+          } @empty {
+            <div class="py-10 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-300">
+              <i class="fa-solid fa-file-circle-exclamation text-3xl text-slate-300 mb-2"></i>
+              <p class="text-sm font-semibold text-slate-700">No hay informes mensuales registrados para este ayudante</p>
+              <p class="text-xs text-slate-400 mt-1">Tan pronto el ayudante genere un informe en su módulo, se reflejará aquí para su revisión y aprobación.</p>
+            </div>
+          }
+        }
+
+        <!-- TAB 2: BITÁCORAS DE SESIONES -->
+        @if (tabMonitoreo === 'bitacoras') {
+          <div class="space-y-3">
+            @for (b of monitoreoAyudanteActual?.bitacoras; track b.id) {
+              <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2">
+                <div class="flex items-center justify-between text-xs">
+                  <span class="font-bold text-slate-800"><i class="fa-regular fa-calendar text-indigo-600 mr-1"></i> {{ b.fecha }}</span>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    Registrada en Sistema
+                  </span>
+                </div>
+                <p class="text-xs text-slate-600 bg-white p-2.5 rounded-lg border border-slate-100 leading-relaxed">
+                  {{ b.actividadesRealizadas }}
+                </p>
+                @if (b.evidenciaUrl) {
+                  <div class="flex items-center justify-between text-[11px] pt-1">
+                    <span class="text-slate-400">Evidencia probatoria adjunta</span>
+                    <a [href]="b.evidenciaUrl" target="_blank" class="text-indigo-600 hover:underline font-medium flex items-center gap-1">
+                      <i class="fa-solid fa-file-pdf"></i> Ver documento
+                    </a>
+                  </div>
+                }
+              </div>
+            } @empty {
+              <div class="py-8 text-center bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                <i class="fa-solid fa-clipboard-check text-2xl text-slate-300 mb-1"></i>
+                <p class="text-xs font-semibold text-slate-700">El ayudante aún no ha registrado bitácoras este mes</p>
+                <p class="text-[11px] text-slate-400">Aparecerán aquí automáticamente tan pronto el ayudante las envíe.</p>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- FOOTER -->
+      <div class="p-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/60 rounded-b-2xl">
+        <span class="text-xs text-slate-500">
+          Supervisando a <strong>{{ ayudanteSeleccionado?.nombre }}</strong> ({{ ayudanteSeleccionado?.horasCompletadas }} / {{ ayudanteSeleccionado?.horasAsignadas }} horas)
+        </span>
+        <button (click)="cerrarMonitoreoBitacoras()" class="py-2 px-5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-xl text-xs font-semibold transition-colors cursor-pointer">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+}

@@ -1,0 +1,7 @@
+/* Opcional: si quieres limitar el texto de la descripción a 2 líneas */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

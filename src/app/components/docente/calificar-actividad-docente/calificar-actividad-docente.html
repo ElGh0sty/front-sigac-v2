@@ -1,0 +1,227 @@
+<div class="space-y-6 max-w-7xl mx-auto" id="calificar-actividad-container">
+  <!-- BREADCRUMB & ACCIONES -->
+  <div class="flex items-center justify-between">
+    <nav class="flex items-center gap-2 text-xs text-slate-500">
+      <a [routerLink]="rutaRetorno" class="hover:text-accent flex items-center gap-1">
+        <i class="fa-solid" [ngClass]="esAyudante ? 'fa-book-open' : 'fa-chalkboard-user'"></i>
+        <span>{{ esAyudante ? 'Mis Cátedras (Ayudantía)' : 'Mis Cátedras' }}</span>
+      </a>
+      <i class="fa-solid fa-chevron-right text-[10px] text-slate-400"></i>
+      <span class="text-slate-800 font-medium">{{ actividad?.catedraNombre || 'Cátedra' }}</span>
+      <i class="fa-solid fa-chevron-right text-[10px] text-slate-400"></i>
+      <span class="text-slate-900 font-semibold truncate max-w-xs">Calificación Nominal</span>
+    </nav>
+    <a [routerLink]="rutaRetorno"
+       class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors">
+      <i class="fa-solid fa-arrow-left text-[11px]"></i>
+      <span>{{ esAyudante ? 'Volver a Ayudantía' : 'Volver a Mis Cátedras' }}</span>
+    </a>
+  </div>
+
+  <!-- CABECERA DE LA ACTIVIDAD -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4" id="header-calificar-actividad">
+    <div class="flex flex-col md:flex-row md:items-start justify-between gap-4 border-b border-slate-100 pb-4">
+      <div>
+        <div class="flex items-center gap-2 mb-1.5">
+          <span class="px-2.5 py-0.5 rounded-full bg-accent/10 text-accent text-[11px] font-bold uppercase tracking-wider">
+            Evaluación Formativa Nominal
+          </span>
+          <span class="text-xs text-slate-500 font-medium">Cátedra: {{ actividad?.catedraNombre }}</span>
+        </div>
+        <h1 class="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">
+          {{ actividad?.titulo }}
+        </h1>
+        <p class="text-xs text-slate-500 mt-1">
+          Calificación individual y retroalimentación personalizada nominal para cada alumno matriculado.
+        </p>
+      </div>
+
+      <!-- Métricas Resumen -->
+      <div class="flex flex-wrap items-center gap-3 shrink-0">
+        <div class="bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200 text-center">
+          <span class="text-[10px] text-slate-500 block uppercase font-bold">Matriculados</span>
+          <span class="text-base font-bold text-slate-900">{{ filas.length }}</span>
+        </div>
+        <div class="bg-blue-50/70 px-3.5 py-2 rounded-xl border border-blue-200 text-center">
+          <span class="text-[10px] text-blue-700 block uppercase font-bold">Entregados</span>
+          <span class="text-base font-bold text-blue-700">{{ totalEntregados }}</span>
+        </div>
+        <div class="bg-emerald-50/70 px-3.5 py-2 rounded-xl border border-emerald-200 text-center">
+          <span class="text-[10px] text-emerald-700 block uppercase font-bold">Calificados</span>
+          <span class="text-base font-bold text-emerald-700">{{ totalCalificados }}</span>
+        </div>
+        <div class="bg-purple-50/70 px-3.5 py-2 rounded-xl border border-purple-200 text-center">
+          <span class="text-[10px] text-purple-700 block uppercase font-bold">Promedio Curso</span>
+          <span class="text-base font-bold text-purple-700">{{ promedioCalificaciones }} / 10</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ALERTA GLOBAL -->
+    @if (mensajeGlobalExito) {
+      <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center gap-2 animate-fade-in">
+        <i class="fa-solid fa-circle-check text-emerald-600 text-sm"></i>
+        <span>{{ mensajeGlobalExito }}</span>
+      </div>
+    }
+  </div>
+
+  <!-- BARRA DE BÚSQUEDA Y FILTROS -->
+  <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-3 items-center justify-between" id="filtros-calificar-bar">
+    <div class="relative w-full sm:w-80">
+      <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+      <input type="text"
+             [(ngModel)]="busquedaTexto"
+             placeholder="Buscar alumno por nombre o matrícula..."
+             id="input-busqueda-alumnos"
+             class="w-full pl-8 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all">
+    </div>
+
+    <div class="flex items-center gap-2 w-full sm:w-auto">
+      <span class="text-xs text-slate-500 font-medium whitespace-nowrap">Estado:</span>
+      <select [(ngModel)]="filtroEstado"
+              id="select-filtro-estado-entrega"
+              class="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-700 outline-none focus:ring-2 focus:ring-accent/20 cursor-pointer">
+        <option value="Todos">Todos los estados</option>
+        <option value="Entregado">Entregado (Por Calificar)</option>
+        <option value="Calificado">Ya Calificado</option>
+        <option value="Pendiente">Pendiente de Entrega</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- TABLA DE CALIFICACIÓN NOMINAL -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden" id="tabla-calificaciones-wrapper">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse" id="tabla-calificar-alumnos">
+        <thead>
+          <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            <th class="py-3 px-4 min-w-[200px]">Estudiante</th>
+            <th class="py-3 px-3 text-center">Estado</th>
+            <th class="py-3 px-3">Fecha Entrega</th>
+            <th class="py-3 px-3">Archivo</th>
+            <th class="py-3 px-3 min-w-[110px]">Nota (0 - 10)</th>
+            <th class="py-3 px-4 min-w-[260px]">Retroalimentación Individual</th>
+            <th class="py-3 px-4 text-right">Acción</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200 text-xs">
+          @for (fila of filasFiltradas; track fila.entrega.estudianteId) {
+            <tr class="hover:bg-slate-50/70 transition-colors" [id]="'fila-alumno-' + fila.entrega.estudianteId">
+              <!-- Nombre y Matrícula -->
+              <td class="py-3.5 px-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-full bg-accent/10 text-accent font-bold flex items-center justify-center text-xs shrink-0">
+                    {{ fila.entrega.estudianteNombre.charAt(0) }}
+                  </div>
+                  <div>
+                    <p class="font-bold text-slate-900 leading-snug">{{ fila.entrega.estudianteNombre }}</p>
+                    <p class="text-[10px] text-slate-400 font-mono">{{ fila.entrega.estudianteMatricula || 'EST-2024' }}</p>
+                  </div>
+                </div>
+              </td>
+
+              <!-- Estado -->
+              <td class="py-3.5 px-3 text-center">
+                @if (fila.entrega.estado === 'Calificado') {
+                  <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold uppercase">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Calificado
+                  </span>
+                } @else if (fila.entrega.estado === 'Entregado') {
+                  <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold uppercase">
+                    <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Entregado
+                  </span>
+                } @else {
+                  <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200 text-[10px] font-bold uppercase">
+                    Pendiente
+                  </span>
+                }
+              </td>
+
+              <!-- Fecha Entrega -->
+              <td class="py-3.5 px-3 text-slate-600">
+                @if (fila.entrega.fechaEntrega) {
+                  <div>
+                    <p class="font-medium text-slate-800">{{ fila.entrega.fechaEntrega | date:'dd/MM/yyyy' }}</p>
+                    <p class="text-[10px] text-slate-400">{{ fila.entrega.fechaEntrega | date:'HH:mm' }}</p>
+                  </div>
+                } @else {
+                  <span class="text-slate-400 italic text-[11px]">—</span>
+                }
+              </td>
+
+              <!-- Enlace de Descarga del Archivo -->
+              <td class="py-3.5 px-3">
+                @if (fila.entrega.nombreArchivo) {
+                  <a [href]="fila.entrega.archivoUrl || '#'"
+                     download
+                     title="Descargar entrega"
+                     class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition-colors truncate max-w-[150px]">
+                    <i class="fa-solid fa-download text-accent text-[11px]"></i>
+                    <span class="truncate">{{ fila.entrega.nombreArchivo }}</span>
+                  </a>
+                } @else {
+                  <span class="text-slate-400 italic text-[11px]">Sin archivo</span>
+                }
+              </td>
+
+              <!-- Input Numérico de Calificación (0 a 10) -->
+              <td class="py-3.5 px-3">
+                <div class="flex items-center gap-1">
+                  <input type="number"
+                         step="0.1"
+                         min="0"
+                         max="10"
+                         [(ngModel)]="fila.calificacionInput"
+                         [placeholder]="'0.0'"
+                         [id]="'input-nota-' + fila.entrega.estudianteId"
+                         class="w-16 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-center font-bold text-slate-900 outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent">
+                  <span class="text-[11px] text-slate-400 font-semibold">/10</span>
+                </div>
+                @if (fila.error) {
+                  <p class="text-[10px] text-rose-500 mt-1">{{ fila.error }}</p>
+                }
+              </td>
+
+              <!-- Input de Texto de Retroalimentación -->
+              <td class="py-3.5 px-4">
+                <input type="text"
+                       [(ngModel)]="fila.retroalimentacionInput"
+                       placeholder="Comentario técnico o recomendación pedagógica..."
+                       [id]="'input-retro-' + fila.entrega.estudianteId"
+                       class="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all">
+              </td>
+
+              <!-- Botón de Asentamiento Nominal -->
+              <td class="py-3.5 px-4 text-right">
+                <button type="button"
+                        (click)="guardarCalificacionFila(fila)"
+                        [disabled]="fila.guardando || fila.calificacionInput === null"
+                        [id]="'btn-guardar-nota-' + fila.entrega.estudianteId"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent hover:bg-accent-hover text-white text-[11px] font-semibold rounded-lg shadow-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98]">
+                  @if (fila.guardando) {
+                    <i class="fa-solid fa-circle-notch fa-spin"></i>
+                    <span>Guardando</span>
+                  } @else if (fila.guardadoExitoso) {
+                    <i class="fa-solid fa-check text-emerald-300"></i>
+                    <span>¡Guardado!</span>
+                  } @else {
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    <span>Asentar</span>
+                  }
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="7" class="py-12 text-center text-slate-400">
+                <i class="fa-solid fa-users-slash text-3xl mb-2 text-slate-300"></i>
+                <p class="text-sm font-medium">No se encontraron estudiantes para los filtros seleccionados.</p>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

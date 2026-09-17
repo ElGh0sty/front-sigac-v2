@@ -1,0 +1,6 @@
+{
+  "name": "SIGAC - UTEQ",
+  "description": "Sistema Integral de Gestión Académica para Cátedras (SIGAC) de la Universidad Técnica Estatal de Quevedo (UTEQ)",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

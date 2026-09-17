@@ -1,0 +1,24 @@
+<div class="space-y-6">
+  <div>
+    <h2 class="text-2xl font-bold text-slate-900">Reportes Administrativos</h2>
+    <p class="text-slate-500 text-sm mt-1">Estadísticas consolidadas del programa de ayudantías.</p>
+  </div>
+
+  <section class="glass-card rounded-2xl p-6">
+    <div class="flex items-center justify-between mb-6">
+      <h3 class="text-sm font-semibold text-slate-900">Resumen General</h3>
+      <button (click)="generarReporte()" class="py-2 px-4 bg-accent hover:bg-accent-dim text-white font-bold rounded-xl shadow-lg shadow-accent/20 text-sm">Generar Reporte PDF</button>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div *ngFor="let item of reporte" class="border border-slate-200 rounded-xl p-4 text-center">
+        <p class="text-xs text-slate-500 uppercase">{{ item.estado }}</p>
+        <p class="text-2xl font-bold text-slate-900">{{ item.cantidad }}</p>
+      </div>
+    </div>
+
+    <div class="border-t border-slate-200 pt-4">
+      <p class="text-sm text-slate-600">Total de ayudantías registradas: <span class="font-bold text-slate-900">{{ total }}</span></p>
+    </div>
+  </section>
+</div>

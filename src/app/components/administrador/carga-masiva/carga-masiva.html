@@ -1,0 +1,270 @@
+<div class="space-y-6 max-w-5xl mx-auto">
+  <!-- ENCABEZADO -->
+  <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-2 text-xs font-semibold text-accent uppercase tracking-wider mb-1">
+        <i class="fa-solid fa-users-gear"></i> Módulo de Administración y Gestión
+      </div>
+      <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Carga Masiva de Estudiantes</h1>
+      <p class="text-sm text-slate-500 mt-1">
+        Importación masiva de estudiantes mediante archivo Excel (.xlsx) o CSV (.csv) con creación automática de credenciales y matriculación directa en la clase seleccionada.
+      </p>
+    </div>
+
+    <!-- Botón de descarga de plantilla -->
+    <button
+      type="button"
+      (click)="descargarPlantilla()"
+      [disabled]="isDownloadingTemplate"
+      class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-colors flex items-center gap-2 border border-slate-300 shrink-0"
+    >
+      <i class="fa-solid fa-download text-accent" *ngIf="!isDownloadingTemplate"></i>
+      <i class="fa-solid fa-spinner fa-spin text-accent" *ngIf="isDownloadingTemplate"></i>
+      <span>Descargar Plantilla CSV</span>
+    </button>
+  </div>
+
+  <!-- SELECTOR OBLIGATORIO DE CLASE / CURSO DESTINO -->
+  <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-3">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      <div>
+        <label class="block text-sm font-bold text-slate-800">
+          Clase / Curso Destino <span class="text-red-500">*</span>
+        </label>
+        <p class="text-xs text-slate-500">
+          Selecciona el aula o paralelo donde los estudiantes del archivo quedarán matriculados oficialmente.
+        </p>
+      </div>
+
+      <div *ngIf="cargandoClases" class="text-xs text-slate-400 flex items-center gap-1.5">
+        <i class="fa-solid fa-spinner fa-spin text-accent"></i> Cargando clases...
+      </div>
+    </div>
+
+    <div class="relative">
+      <select
+        [(ngModel)]="claseSeleccionadaId"
+        name="claseSeleccionadaId"
+        required
+        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent cursor-pointer transition-all"
+      >
+        <option value="" disabled selected>-- Selecciona obligatoriamente la clase o curso destino --</option>
+        <option *ngFor="let c of clases" [value]="c.id">
+          {{ c.nombre }} &bull; {{ c.materiaNombre || 'Materia Oficial' }} ({{ c.semestre || '2026-2' }})
+        </option>
+      </select>
+    </div>
+
+    <div *ngIf="claseSeleccionadaObj" class="p-3 bg-indigo-50/70 border border-indigo-100 rounded-xl text-xs text-indigo-900 flex items-center gap-2">
+      <i class="fa-solid fa-chalkboard-user text-indigo-600 text-sm"></i>
+      <span><strong>Clase activa para importación:</strong> {{ claseSeleccionadaObj.nombre }} &mdash; Docente: {{ claseSeleccionadaObj.docenteNombre || 'Docente Responsable' }}</span>
+    </div>
+  </div>
+
+  <!-- REQUISITOS DE LA PLANTILLA -->
+  <div class="bg-blue-50/70 border border-blue-200 rounded-2xl p-4 text-xs text-blue-900 flex items-start gap-3">
+    <i class="fa-solid fa-circle-info text-blue-600 text-base shrink-0 mt-0.5"></i>
+    <div class="space-y-1">
+      <p class="font-bold text-blue-950">Estructura requerida del archivo (.xlsx o .csv):</p>
+      <p class="text-blue-800 leading-relaxed">
+        El archivo debe contener obligatoriamente las siguientes 4 columnas en la primera fila:
+        <code class="bg-blue-100/80 px-1.5 py-0.5 rounded font-mono font-bold text-blue-900">nombres</code>,
+        <code class="bg-blue-100/80 px-1.5 py-0.5 rounded font-mono font-bold text-blue-900">apellidos</code>,
+        <code class="bg-blue-100/80 px-1.5 py-0.5 rounded font-mono font-bold text-blue-900">cedula</code> y
+        <code class="bg-blue-100/80 px-1.5 py-0.5 rounded font-mono font-bold text-blue-900">correo</code>.
+      </p>
+      <p class="text-[11px] text-blue-700">Roles con permisos de importación: Administrador, Decano, Coordinador, Docente.</p>
+    </div>
+  </div>
+
+  <!-- ALERTA DE ERROR -->
+  <div *ngIf="mensajeError" class="p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-3 text-rose-800 text-sm">
+    <i class="fa-solid fa-circle-exclamation text-rose-600 text-lg shrink-0"></i>
+    <span>{{ mensajeError }}</span>
+  </div>
+
+  <!-- ÁREA DE CARGA DRAG & DROP -->
+  <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+    <div
+      class="border-2 border-dashed rounded-2xl p-8 text-center transition-all cursor-pointer relative"
+      [class.border-accent]="isDragging"
+      [class.bg-accent/5]="isDragging"
+      [class.border-slate-300]="!isDragging && !archivoSeleccionado"
+      [class.border-emerald-400]="archivoSeleccionado"
+      [class.bg-emerald-50/20]="archivoSeleccionado"
+      (dragover)="onDragOver($event)"
+      (dragleave)="onDragLeave($event)"
+      (drop)="onDrop($event)"
+    >
+      <input
+        type="file"
+        id="bulkFileInput"
+        accept=".xlsx,.csv"
+        (change)="onFileChange($event)"
+        class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+        [disabled]="isUploading"
+      />
+
+      <div *ngIf="!archivoSeleccionado" class="space-y-3">
+        <div class="w-14 h-14 rounded-full bg-accent/10 text-accent flex items-center justify-center mx-auto text-2xl">
+          <i class="fa-solid fa-cloud-arrow-up"></i>
+        </div>
+        <div>
+          <p class="text-sm font-bold text-slate-800">
+            Arrastra y suelta tu archivo aquí o <span class="text-accent underline">haz clic para examinar</span>
+          </p>
+          <p class="text-xs text-slate-400 mt-1">Archivos soportados: Microsoft Excel (.xlsx) o Delimitado por comas (.csv) hasta 10 MB</p>
+        </div>
+      </div>
+
+      <div *ngIf="archivoSeleccionado" class="space-y-3">
+        <div class="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto text-2xl">
+          <i class="fa-solid fa-file-excel"></i>
+        </div>
+        <div>
+          <p class="text-sm font-bold text-slate-900">{{ archivoSeleccionado.name }}</p>
+          <p class="text-xs text-slate-500 mt-0.5">Tamaño: {{ (archivoSeleccionado.size / 1024).toFixed(1) }} KB</p>
+        </div>
+        <p class="text-xs text-emerald-700 font-semibold flex items-center justify-center gap-1">
+          <i class="fa-solid fa-circle-check"></i> Archivo listo para importar
+        </p>
+      </div>
+    </div>
+
+    <!-- BARRA DE PROGRESO DE CARGA -->
+    <div *ngIf="isUploading" class="mt-6 space-y-2">
+      <div class="flex items-center justify-between text-xs font-semibold text-slate-700">
+        <span>Procesando registros y matriculando en la clase seleccionada...</span>
+        <span>{{ progreso }}%</span>
+      </div>
+      <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+        <div class="bg-accent h-2.5 rounded-full transition-all duration-300" [style.width.%]="progreso"></div>
+      </div>
+    </div>
+
+    <!-- BOTONES DE ACCIÓN -->
+    <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+      <button
+        *ngIf="archivoSeleccionado"
+        type="button"
+        (click)="reiniciar()"
+        [disabled]="isUploading"
+        class="px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors"
+      >
+        <i class="fa-solid fa-arrow-rotate-left mr-1"></i> Seleccionar otro archivo
+      </button>
+      <div *ngIf="!archivoSeleccionado"></div>
+
+      <button
+        type="button"
+        (click)="subirArchivo()"
+        [disabled]="!archivoSeleccionado || !claseSeleccionadaId || isUploading"
+        class="px-6 py-3 bg-accent hover:bg-accent-dim disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-bold rounded-xl text-xs shadow-md shadow-accent/20 transition-all flex items-center gap-2 ml-auto"
+      >
+        <i class="fa-solid fa-upload" *ngIf="!isUploading"></i>
+        <i class="fa-solid fa-spinner fa-spin" *ngIf="isUploading"></i>
+        <span>{{ isUploading ? 'Importando estudiantes...' : 'Comenzar Carga Masiva' }}</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- RESULTADOS DE LA IMPORTACIÓN -->
+  <div *ngIf="resultado" class="space-y-6">
+
+    <!-- RESUMEN DE ÉXITO CON BOTÓN IR A LA CLASE -->
+    <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div class="flex items-start gap-3">
+        <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-xl shrink-0">
+          <i class="fa-solid fa-circle-check"></i>
+        </div>
+        <div>
+          <h2 class="text-base font-bold text-emerald-950">¡Carga Masiva y Matriculación Completadas!</h2>
+          <p class="text-xs text-emerald-800 mt-1">
+            Se registraron <strong class="font-black">{{ resultado.createdCount }}</strong> estudiantes en la clase
+            <strong>{{ claseSeleccionadaObj?.nombre || ('ID: ' + claseSeleccionadaId) }}</strong>.
+          </p>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        (click)="irAClase()"
+        class="px-5 py-3 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black rounded-xl shadow-md shadow-emerald-700/20 transition-all flex items-center gap-2 shrink-0 justify-center"
+      >
+        <i class="fa-solid fa-users-viewfinder"></i>
+        <span>Ir a la Clase</span>
+      </button>
+    </div>
+
+    <!-- MÉTRICAS DE RESULTADO -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center text-xl shrink-0">
+          <i class="fa-solid fa-list-ol"></i>
+        </div>
+        <div>
+          <span class="text-xs text-slate-500 font-medium">Filas Procesadas</span>
+          <p class="text-2xl font-black text-slate-900">{{ resultado.totalFilasProcesadas || (resultado.createdCount + resultado.errors.length) }}</p>
+        </div>
+      </div>
+
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-xl shrink-0">
+          <i class="fa-solid fa-user-plus"></i>
+        </div>
+        <div>
+          <span class="text-xs text-slate-500 font-medium">Estudiantes Creados / Matriculados</span>
+          <p class="text-2xl font-black text-emerald-600">{{ resultado.createdCount }}</p>
+        </div>
+      </div>
+
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center text-xl shrink-0">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <div>
+          <span class="text-xs text-slate-500 font-medium">Observaciones / Errores</span>
+          <p class="text-2xl font-black text-rose-600">{{ resultado.errors.length }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- LISTADO DE USUARIOS CREADOS EXITOSAMENTE -->
+    <div *ngIf="resultado.createdUsernames.length > 0" class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-3">
+      <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+        <i class="fa-solid fa-circle-check text-emerald-600"></i>
+        Cuentas Creadas y Matriculadas ({{ resultado.createdUsernames.length }})
+      </h3>
+      <p class="text-xs text-slate-500">Se han habilitado credenciales y perfiles académicos para los siguientes usuarios:</p>
+
+      <div class="flex flex-wrap gap-2 pt-2">
+        <span
+          *ngFor="let u of resultado.createdUsernames"
+          class="px-3 py-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-mono font-medium flex items-center gap-1.5"
+        >
+          <i class="fa-solid fa-at text-[10px] text-emerald-500"></i> {{ u }}
+        </span>
+      </div>
+    </div>
+
+    <!-- LISTADO DE ERRORES DETECTADOS -->
+    <div *ngIf="resultado.errors.length > 0" class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-3">
+      <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+        <i class="fa-solid fa-circle-xmark text-rose-600"></i>
+        Registros con Inconsistencias ({{ resultado.errors.length }})
+      </h3>
+      <p class="text-xs text-slate-500">Los siguientes registros no pudieron ser insertados. Por favor corrija el archivo y reintente:</p>
+
+      <div class="space-y-2 pt-1">
+        <div
+          *ngFor="let err of resultado.errors"
+          class="p-3 bg-rose-50/70 border border-rose-200 rounded-xl text-xs text-rose-900 flex items-start gap-2.5"
+        >
+          <i class="fa-solid fa-triangle-exclamation text-rose-600 mt-0.5 shrink-0"></i>
+          <span>{{ err }}</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

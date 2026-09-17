@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>SIGAC - UTEQ</title>
+    <base href="/" />
+    <script>
+      (function() {
+        // 1. Suprimir excepciones no controladas de telemetría / web-vitals externos (startTime / reportAllChanges)
+        if (typeof window !== 'undefined') {
+          window.addEventListener('error', function(event) {
+            var msg = (event && (event.message || (event.error && event.error.message))) || '';
+            if (typeof msg === 'string' && (
+              msg.indexOf('startTime') !== -1 ||
+              msg.indexOf('reportAllChanges') !== -1
+            )) {
+              if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+              if (event.preventDefault) event.preventDefault();
+              return true;
+            }
+          }, true);
+
+          window.addEventListener('unhandledrejection', function(event) {
+            var reason = (event && event.reason && (event.reason.message || event.reason)) || '';
+            if (typeof reason === 'string' && (
+              reason.indexOf('startTime') !== -1 ||
+              reason.indexOf('reportAllChanges') !== -1
+            )) {
+              if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+              if (event.preventDefault) event.preventDefault();
+            }
+          }, true);
+
+          // 2. Proteger PerformanceObserver para asegurar que entries siempre tengan startTime
+          if (window.PerformanceObserver) {
+            try {
+              var OrigPerfObserver = window.PerformanceObserver;
+              var SafePerfObserver = function(callback) {
+                var safeCallback = function(list, observer) {
+                  try {
+                    if (list && typeof list.getEntries === 'function') {
+                      var origGetEntries = list.getEntries.bind(list);
+                      list.getEntries = function() {
+                        try {
+                          var entries = origGetEntries();
+                          if (Array.isArray(entries)) {
+                            return entries.map(function(item) {
+                              if (item && typeof item.startTime === 'undefined') {
+                                try { item.startTime = performance.now(); } catch(e) {}
+                              }
+                              return item;
+                            }).filter(Boolean);
+                          }
+                          return entries || [];
+                        } catch(e) {
+                          return [];
+                        }
+                      };
+                    }
+                    return callback.call(this, list, observer);
+                  } catch (err) {
+                    var errMsg = (err && err.message) || '';
+                    if (errMsg.indexOf('startTime') !== -1 || errMsg.indexOf('reportAllChanges') !== -1) {
+                      return;
+                    }
+                  }
+                };
+                return new OrigPerfObserver(safeCallback);
+              };
+              SafePerfObserver.prototype = OrigPerfObserver.prototype;
+              SafePerfObserver.supportedEntryTypes = OrigPerfObserver.supportedEntryTypes;
+              window.PerformanceObserver = SafePerfObserver;
+            } catch(e) {}
+          }
+        }
+
+        try {
+          var origFetch = (typeof window !== 'undefined' && window.fetch) ? window.fetch.bind(window) : null;
+          var currentFetch = origFetch;
+
+          function defineFetchAccessor(target) {
+            if (!target) return;
+            try {
+              Object.defineProperty(target, 'fetch', {
+                get: function() {
+                  return currentFetch;
+                },
+                set: function(fn) {
+                  currentFetch = fn;
+                },
+                configurable: true,
+                enumerable: true
+              });
+            } catch (err) {}
+          }
+
+          if (typeof window !== 'undefined') {
+            defineFetchAccessor(window);
+            if (window.Window && window.Window.prototype) {
+              defineFetchAccessor(window.Window.prototype);
+            }
+          }
+          if (typeof globalThis !== 'undefined' && globalThis !== window) {
+            defineFetchAccessor(globalThis);
+          }
+        } catch(e) {}
+      })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Sistema Integral de Gestión Académica para Cátedras (SIGAC) de la Universidad Técnica Estatal de Quevedo (UTEQ) - Facultad de Ciencias de la Computación, Carrera de Ingeniería de Software. Plataforma web para seguimiento estudiantil, gestión de cátedras, ayudantías y clases de refuerzo." />
+    <meta property="og:title" content="SIGAC - UTEQ" />
+    <meta property="og:description" content="Sistema Integral de Gestión Académica para Cátedras (SIGAC) de la Universidad Técnica Estatal de Quevedo (UTEQ) - Facultad de Ciencias de la Computación, Carrera de Ingeniería de Software. Plataforma web para seguimiento estudiantil, gestión de cátedras, ayudantías y clases de refuerzo." />
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <script src="https://cdn.plot.ly/plotly-3.1.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/js/all.min.js"></script>
+  </head>
+  <body>
+    <app-root></app-root>
+  </body>
+</html>

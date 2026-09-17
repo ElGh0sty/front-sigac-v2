@@ -1,0 +1,339 @@
+<div class="space-y-6">
+  <!-- Top Header with Actions & View Mode Toggle -->
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div>
+      <h2 class="text-2xl font-bold text-slate-900">Materias del Sistema</h2>
+      <p class="text-slate-500 text-sm mt-1">Organiza, diferencia y administra las asignaturas por clase, cohorte académica y docente.</p>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2.5">
+      <!-- View Mode Toggle -->
+      <div class="bg-slate-100 p-1 rounded-xl flex items-center border border-slate-200 text-xs font-semibold">
+        <button
+          (click)="modoVista = 'grid'"
+          [class.bg-white]="modoVista === 'grid'"
+          [class.text-accent]="modoVista === 'grid'"
+          [class.shadow-sm]="modoVista === 'grid'"
+          class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5"
+        >
+          <i class="fa-solid fa-grip"></i>
+          <span>Cuadrícula</span>
+        </button>
+        <button
+          (click)="modoVista = 'por_clase'"
+          [class.bg-white]="modoVista === 'por_clase'"
+          [class.text-accent]="modoVista === 'por_clase'"
+          [class.shadow-sm]="modoVista === 'por_clase'"
+          class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5"
+        >
+          <i class="fa-solid fa-layer-group"></i>
+          <span>Por Clases</span>
+        </button>
+      </div>
+
+      <a routerLink="/admin/crear-clase" class="py-2 px-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-colors text-xs font-semibold flex items-center gap-1.5">
+        <i class="fa-solid fa-graduation-cap text-xs"></i>
+        <span>Nueva Clase</span>
+      </a>
+
+      <a routerLink="/admin/crear-materia" class="py-2 px-4 bg-accent text-white rounded-xl hover:bg-accent-dim transition-colors text-xs font-semibold flex items-center gap-1.5 shadow-sm shadow-accent/20">
+        <i class="fa-solid fa-plus"></i>
+        <span>Crear Materia</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Search, Semester and Class Dropdowns -->
+  <div class="glass-card rounded-2xl p-4 border border-slate-200 space-y-3">
+    <div class="flex flex-col md:flex-row gap-3 items-center justify-between">
+      <!-- Search Input -->
+      <div class="relative w-full md:w-80">
+        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+        <input
+          type="text"
+          [(ngModel)]="terminoBusqueda"
+          (ngModelChange)="aplicarFiltros()"
+          placeholder="Buscar por materia, código, docente..."
+          class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
+        />
+      </div>
+
+      <!-- Selectors -->
+      <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+        <div class="flex items-center gap-2">
+          <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">Clase:</label>
+          <select
+            [(ngModel)]="claseSeleccionada"
+            (ngModelChange)="aplicarFiltros()"
+            class="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent max-w-[200px] truncate"
+          >
+            <option [ngValue]="'Todas'">Todas las Clases</option>
+            <option *ngFor="let c of clases" [ngValue]="c">{{ c.nombre }}</option>
+          </select>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">Semestre:</label>
+          <select
+            [(ngModel)]="filtroSemestre"
+            (ngModelChange)="aplicarFiltros()"
+            class="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
+          >
+            <option value="todos">Todos</option>
+            <option *ngFor="let s of semestresDisponibles" [value]="s">{{ s }}</option>
+          </select>
+        </div>
+
+        <span class="text-xs font-semibold text-slate-400 bg-slate-100 px-3 py-1.5 rounded-xl whitespace-nowrap">
+          {{ materiasFiltradas.length }} {{ materiasFiltradas.length === 1 ? 'materia' : 'materias' }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Class Filter Quick Chips (Píldoras con selección inicial 'Todas') -->
+    <div *ngIf="clases.length > 0" class="pt-2 border-t border-slate-100 flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+      <span class="text-slate-400 font-semibold uppercase text-[10px] whitespace-nowrap mr-1">Filtrar por Clase:</span>
+      <button
+        (click)="seleccionarClase('Todas')"
+        [class.bg-accent]="claseSeleccionada === 'Todas' || !claseSeleccionada || !claseSeleccionada.id"
+        [class.text-white]="claseSeleccionada === 'Todas' || !claseSeleccionada || !claseSeleccionada.id"
+        [class.bg-slate-100]="claseSeleccionada !== 'Todas' && claseSeleccionada?.id"
+        [class.text-slate-700]="claseSeleccionada !== 'Todas' && claseSeleccionada?.id"
+        class="px-3 py-1 rounded-full font-medium transition-colors whitespace-nowrap hover:bg-accent/80 hover:text-white"
+      >
+        Todas
+      </button>
+
+      <button
+        *ngFor="let c of clases"
+        (click)="seleccionarClase(c)"
+        [class.bg-accent]="claseSeleccionada?.id === c.id"
+        [class.text-white]="claseSeleccionada?.id === c.id"
+        [class.bg-slate-100]="claseSeleccionada?.id !== c.id"
+        [class.text-slate-700]="claseSeleccionada?.id !== c.id"
+        class="px-3 py-1 rounded-full font-medium transition-colors whitespace-nowrap hover:bg-accent/80 hover:text-white flex items-center gap-1.5"
+      >
+        <i class="fa-solid fa-graduation-cap text-[10px]"></i>
+        <span>{{ c.nombre }}</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="materiasFiltradas.length === 0" class="glass-card rounded-2xl p-12 text-center border border-slate-200">
+    <div class="w-16 h-16 rounded-2xl bg-accent/10 text-accent flex items-center justify-center mx-auto mb-4 text-2xl">
+      <i class="fa-solid fa-book-open"></i>
+    </div>
+    <h3 class="text-lg font-bold text-slate-800">
+      {{ terminoBusqueda || (claseSeleccionada && claseSeleccionada !== 'Todas') || filtroSemestre !== 'todos' ? 'No hay materias con estos filtros' : 'No hay materias registradas' }}
+    </h3>
+    <p class="text-slate-500 text-sm mt-1 mb-6 max-w-md mx-auto">
+      {{ terminoBusqueda || (claseSeleccionada && claseSeleccionada !== 'Todas') || filtroSemestre !== 'todos' ? 'Prueba cambiando los términos de búsqueda o seleccionando otra clase.' : 'Comienza creando una nueva materia para asignarle docentes y vincularla a una clase.' }}
+    </p>
+    <div class="flex justify-center gap-3">
+      <button *ngIf="terminoBusqueda || (claseSeleccionada && claseSeleccionada !== 'Todas') || filtroSemestre !== 'todos'" (click)="limpiarFiltros()" class="py-2.5 px-5 bg-slate-100 text-slate-700 font-semibold rounded-xl text-sm hover:bg-slate-200 transition-colors">
+        Limpiar Filtros
+      </button>
+      <a routerLink="/admin/crear-materia" class="py-2.5 px-5 bg-accent text-white rounded-xl text-sm font-semibold hover:bg-accent-dim transition-colors">
+        Crear Primera Materia
+      </a>
+    </div>
+  </div>
+
+  <!-- ==================== VISTA 1: MODO CUADRÍCULA CON DIFERENCIACIÓN VISUAL ==================== -->
+  <div *ngIf="modoVista === 'grid' && materiasFiltradas.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div *ngFor="let m of materiasFiltradas" class="glass-card rounded-2xl p-6 border border-slate-200 hover:shadow-lg transition-all flex flex-col justify-between group">
+      <div>
+        <!-- Badge de Semestre y Acciones -->
+        <div class="mb-3 flex items-center justify-between gap-2">
+          <span class="text-[11px] font-mono text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-full font-semibold shrink-0">
+            Periodo: {{ m.semestre || '2026-2' }}
+          </span>
+
+          <button (click)="eliminarMateria(m.id, $event)" title="Eliminar materia" class="text-slate-300 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 transition-colors">
+            <i class="fa-regular fa-trash-can text-sm"></i>
+          </button>
+        </div>
+
+        <!-- Header: Título y Código -->
+        <div class="flex items-start justify-between gap-3 mb-3">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent shrink-0">
+              <i class="fa-solid fa-book-bookmark text-base"></i>
+            </div>
+            <div>
+              <h3 class="text-base font-bold text-slate-900 leading-snug">{{ m.nombre }}</h3>
+              <p class="text-xs text-slate-400 font-mono mt-0.5">{{ m.codigo }} · {{ m.creditos || 4 }} créditos</p>
+            </div>
+          </div>
+        </div>
+
+        <p class="text-xs text-slate-600 mb-3.5 line-clamp-2">{{ m.descripcion }}</p>
+
+        <!-- Clases / Paralelos Asociados (materia.clases) -->
+        <div class="mb-3 p-2.5 bg-blue-50/60 border border-blue-100 rounded-xl">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-[10px] font-bold text-blue-900 uppercase tracking-wider flex items-center gap-1.5">
+              <i class="fa-solid fa-layer-group text-blue-600 text-[11px]"></i>
+              Clases / Paralelos Asociados
+            </span>
+            <span class="text-[10px] font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
+              {{ getClasesList(m).length }}
+            </span>
+          </div>
+
+          <div *ngIf="getClasesList(m).length > 0" class="flex flex-wrap gap-1.5 pt-1">
+            <span
+              *ngFor="let c of getClasesList(m)"
+              class="px-2.5 py-1 bg-white border border-blue-200 text-blue-800 text-xs font-semibold rounded-lg flex items-center gap-1.5 shadow-2xs"
+            >
+              <i class="fa-solid fa-graduation-cap text-[10px] text-blue-600"></i>
+              <span>{{ getClaseNombre(c) }}</span>
+            </span>
+          </div>
+
+          <div *ngIf="getClasesList(m).length === 0" class="text-xs text-slate-400 italic text-center py-1">
+            Sin clases o paralelos asociados aún
+          </div>
+        </div>
+
+        <!-- Docente y Grupo -->
+        <div class="mb-3 p-2.5 bg-slate-50 border border-slate-100 rounded-xl space-y-1">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Docente Titular:</span>
+            <span class="font-semibold text-slate-800 flex items-center gap-1.5 truncate max-w-[65%]">
+              <i class="fa-solid fa-chalkboard-user text-accent text-[11px]"></i>
+              <span class="truncate">{{ m.docente || m.docenteNombre || 'Docente Asignado' }}</span>
+            </span>
+          </div>
+          <div *ngIf="m.grupo" class="flex items-center justify-between text-[11px] pt-1 border-t border-slate-100">
+            <span class="text-slate-400">Modalidad / Grupo:</span>
+            <span class="font-medium text-slate-700">{{ m.grupo }}</span>
+          </div>
+        </div>
+
+        <!-- Ayudantes -->
+        <div class="mb-3">
+          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Ayudantes de cátedra</p>
+          <div class="flex flex-wrap gap-1">
+            <span *ngFor="let a of m.ayudantes" class="px-2 py-0.5 bg-purple-50 border border-purple-100 text-purple-700 text-[11px] font-medium rounded-full">
+              {{ a }}
+            </span>
+            <span *ngIf="!m.ayudantes || m.ayudantes.length === 0" class="text-xs text-slate-400 italic">
+              Sin ayudantes asignados
+            </span>
+          </div>
+        </div>
+
+        <!-- Estudiantes Inscritos -->
+        <div>
+          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+            Estudiantes Inscritos ({{ m.estudiantes?.length || 0 }})
+          </p>
+          <div *ngIf="m.estudiantes && m.estudiantes.length > 0" class="space-y-1 max-h-20 overflow-y-auto pr-1">
+            <div *ngFor="let e of m.estudiantes" class="flex items-center justify-between text-xs py-0.5">
+              <span class="font-medium text-slate-700 truncate mr-2">{{ e.nombre }}</span>
+              <span class="text-slate-400 font-mono text-[11px]">{{ e.nota || 4.5 }} · {{ e.asistencia || 90 }}%</span>
+            </div>
+          </div>
+          <p *ngIf="!m.estudiantes || m.estudiantes.length === 0" class="text-xs text-slate-400 italic">
+            Sin estudiantes inscritos aún
+          </p>
+        </div>
+      </div>
+
+      <!-- Card Footer -->
+      <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+        <a [routerLink]="['/admin/gestion-estudiantes', m.id]" class="text-xs text-accent font-semibold hover:underline flex items-center gap-1">
+          <i class="fa-solid fa-user-plus text-[10px]"></i> Gestionar estudiantes
+        </a>
+        <a [routerLink]="['/estudiante/materia', m.id]" class="text-xs text-slate-600 hover:text-accent font-medium flex items-center gap-1">
+          <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> Ver aula
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== VISTA 2: AGRUPADO POR CLASE / COHORTE ==================== -->
+  <div *ngIf="modoVista === 'por_clase' && materiasAgrupadasPorClase.length > 0" class="space-y-6">
+    <div *ngFor="let grupo of materiasAgrupadasPorClase" class="glass-card rounded-2xl p-6 border border-slate-200 space-y-4">
+      <!-- Section Class Header -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+            <i class="fa-solid fa-graduation-cap text-lg"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="text-lg font-bold text-slate-900">{{ grupo.claseNombre }}</h3>
+              <span class="text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full">
+                {{ grupo.semestre }}
+              </span>
+            </div>
+            <p class="text-xs text-slate-500 mt-0.5">
+              {{ grupo.materias.length }} {{ grupo.materias.length === 1 ? 'materia asignada' : 'materias asignadas' }} · {{ grupo.totalEstudiantes }} estudiantes · {{ grupo.totalCreditos }} créditos totales
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <a
+            [routerLink]="['/admin/crear-materia']"
+            class="py-1.5 px-3 bg-accent/10 text-accent hover:bg-accent hover:text-white rounded-lg transition-colors text-xs font-semibold flex items-center gap-1.5"
+          >
+            <i class="fa-solid fa-plus text-[10px]"></i>
+            <span>Añadir Materia</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Materias Grid for this specific class -->
+      <div *ngIf="grupo.materias.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div *ngFor="let m of grupo.materias" class="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80 hover:border-accent/40 hover:bg-white transition-all flex flex-col justify-between group">
+          <div>
+            <div class="flex items-start justify-between gap-2 mb-2">
+              <div>
+                <h4 class="text-sm font-bold text-slate-900 leading-tight">{{ m.nombre }}</h4>
+                <p class="text-[11px] text-slate-400 font-mono">{{ m.codigo }} · {{ m.creditos || 4 }} créditos</p>
+              </div>
+              <button (click)="eliminarMateria(m.id, $event)" title="Eliminar materia" class="text-slate-300 hover:text-red-500 p-1 rounded hover:bg-red-50 transition-colors">
+                <i class="fa-regular fa-trash-can text-xs"></i>
+              </button>
+            </div>
+
+            <p class="text-xs text-slate-600 mb-3 line-clamp-2">{{ m.descripcion }}</p>
+
+            <div class="text-xs space-y-1 mb-3">
+              <div class="flex items-center gap-1.5 text-slate-700">
+                <i class="fa-solid fa-chalkboard-user text-accent text-[11px]"></i>
+                <span class="font-medium truncate">{{ m.docente || m.docenteNombre || 'Docente Asignado' }}</span>
+              </div>
+              <div *ngIf="m.grupo" class="text-[11px] text-slate-500">
+                <span>{{ m.grupo }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-2.5 border-t border-slate-200/60 flex items-center justify-between gap-2 text-xs">
+            <a [routerLink]="['/admin/gestion-estudiantes', m.id]" class="text-accent font-semibold hover:underline">
+              {{ m.estudiantes?.length || 0 }} estudiantes
+            </a>
+            <a [routerLink]="['/estudiante/materia', m.id]" class="text-slate-500 hover:text-accent font-medium flex items-center gap-1">
+              <span>Aula</span> <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="grupo.materias.length === 0" class="p-6 bg-slate-50 rounded-xl text-center border border-dashed border-slate-200">
+        <p class="text-xs text-slate-500 mb-2">Esta clase aún no tiene materias asignadas.</p>
+        <a
+          [routerLink]="['/admin/crear-materia']"
+          class="text-xs font-semibold text-accent hover:underline"
+        >
+          + Crear materia
+        </a>
+      </div>
+    </div>
+  </div>
+</div>

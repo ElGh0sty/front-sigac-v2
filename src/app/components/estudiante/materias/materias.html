@@ -1,0 +1,171 @@
+<div class="max-w-7xl mx-auto p-4 md:p-6 space-y-6" id="materias-estudiante-container">
+  
+  <!-- CABECERA Y RESUMEN ACADÉMICO COMPACTO -->
+  <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs relative overflow-hidden" id="cabecera-mis-materias">
+    <div class="absolute -right-16 -top-16 w-64 h-64 bg-blue-50/60 rounded-full blur-2xl pointer-events-none"></div>
+
+    <div class="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div class="space-y-1 max-w-xl">
+        <div class="flex items-center gap-2">
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+            <i class="fa-solid fa-graduation-cap text-[10px]"></i> Periodo 2026-2
+          </span>
+          <span class="text-xs text-slate-400 font-medium">Ciclo Académico Activo</span>
+        </div>
+        <h1 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+          Mis Asignaturas Inscritas
+        </h1>
+        <p class="text-xs sm:text-sm text-slate-500 leading-relaxed">
+          Acceso a aulas virtuales, guías prácticas, actividades y seguimiento de avance lectivo.
+        </p>
+      </div>
+
+      <!-- Resumen de Asignaturas y Créditos -->
+      <div class="flex items-center gap-2.5 shrink-0">
+        <div class="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-center min-w-[85px] shadow-2xs">
+          <span class="text-xl font-bold text-slate-900 block leading-tight">{{ materias.length }}</span>
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Cátedras</span>
+        </div>
+        <div class="px-4 py-2.5 bg-blue-50/70 border border-blue-200 rounded-xl text-center min-w-[85px] shadow-2xs">
+          <span class="text-xl font-bold text-blue-700 block leading-tight">
+            {{ materias.length * 4 }}
+          </span>
+          <span class="text-[10px] font-bold text-blue-600 uppercase tracking-wider block">Créditos</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BARRA DE BÚSQUEDA Y FILTRO -->
+  <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3" id="barra-busqueda-materias">
+    <div class="relative flex-1 max-w-md">
+      <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+      <input type="text"
+             [(ngModel)]="filtroTexto"
+             placeholder="Buscar cátedra (ej. calculo, MAT-301, docente)..."
+             class="w-full pl-9 pr-9 py-2.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all shadow-2xs" />
+      <button *ngIf="filtroTexto"
+              (click)="filtroTexto = ''"
+              title="Limpiar búsqueda"
+              class="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center text-[10px] transition-colors cursor-pointer">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div class="flex items-center justify-between sm:justify-end gap-3 text-xs text-slate-500 font-medium">
+      <span>{{ materiasFiltradas.length }} de {{ materias.length }} cátedras</span>
+    </div>
+  </div>
+
+  <!-- ESTADO VACÍO SI NO HAY COINCIDENCIAS -->
+  <div *ngIf="materiasFiltradas.length === 0" class="text-center py-14 px-6 bg-white rounded-2xl border border-slate-200 shadow-xs">
+    <div class="w-12 h-12 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center mx-auto mb-3 border border-slate-200 text-lg">
+      <i class="fa-solid fa-book-open"></i>
+    </div>
+    <h3 class="text-base font-bold text-slate-800">
+      {{ filtroTexto ? 'No se encontraron materias coincidentes' : 'No tienes materias registradas' }}
+    </h3>
+    <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto leading-relaxed">
+      {{ filtroTexto ? 'Intenta con otro término o limpia el buscador para ver todas tus cátedras.' : 'Tus materias inscritas aparecerán aquí una vez formalizada la matrícula.' }}
+    </p>
+    <button *ngIf="filtroTexto" (click)="filtroTexto = ''" class="mt-4 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors cursor-pointer">
+      Limpiar búsqueda
+    </button>
+  </div>
+
+  <!-- GRID COMPACTO DE MATERIAS (3 COLUMNAS RESPONSIVAS, TAMAÑO MODERADO) -->
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5" *ngIf="materiasFiltradas.length > 0">
+    
+    <div *ngFor="let materia of materiasFiltradas; let idx = index"
+         class="bg-white rounded-2xl border border-slate-200/90 hover:border-accent/60 hover:shadow-lg transition-all duration-200 flex flex-col justify-between overflow-hidden relative group cursor-pointer"
+         [routerLink]="['/estudiante/materia', materia.id]">
+      
+      <!-- Línea superior de acento temático sutil -->
+      <div class="h-1.5 w-full bg-gradient-to-r {{ getColorTheme(idx).bgAccent }}"></div>
+
+      <!-- Cuerpo de la Tarjeta con Padding Compacto (p-5) -->
+      <div class="p-5 space-y-3.5 flex-1 flex flex-col justify-between">
+        
+        <div class="space-y-3">
+          <!-- Cabecera de la Tarjeta: Código, Créditos y Estado -->
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <span class="text-[11px] font-mono font-bold px-2.5 py-1 rounded-lg {{ getColorTheme(idx).badgeBg }}">
+                {{ materia.codigo }}
+              </span>
+              <span class="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 py-1 rounded-lg">
+                {{ materia.creditos || 4 }} Cr.
+              </span>
+            </div>
+
+            <span class="inline-flex items-center gap-1.5 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Activa
+            </span>
+          </div>
+
+          <!-- Título y Descripción Compacta -->
+          <div>
+            <h2 class="text-base font-bold text-slate-900 group-hover:text-accent transition-colors leading-snug tracking-tight truncate"
+                title="{{ materia.nombre }}">
+              {{ materia.nombre }}
+            </h2>
+            <p class="text-xs text-slate-500 leading-relaxed line-clamp-2 mt-1 min-h-[32px]">
+              {{ materia.descripcion || 'Desarrollo de competencias, fundamentos teóricos y aplicación práctica en talleres.' }}
+            </p>
+          </div>
+
+          <!-- Bloque Docente y Aula (Formato Compacto) -->
+          <div class="p-2.5 bg-slate-50/90 border border-slate-200/70 rounded-xl space-y-1.5">
+            <div class="flex items-center gap-2.5">
+              <div class="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-700 flex items-center justify-center font-bold text-[11px] shrink-0 shadow-2xs">
+                {{ getInicialesDocente(materia.docente) }}
+              </div>
+              <div class="min-w-0 flex-1">
+                <span class="text-[9px] font-bold uppercase tracking-wider text-slate-400 block leading-tight">Docente Titular</span>
+                <p class="text-xs font-bold text-slate-800 truncate leading-tight">
+                  {{ materia.docente || 'Docente Asignado' }}
+                </p>
+              </div>
+            </div>
+
+            <div class="text-[11px] text-slate-500 flex items-center gap-1.5 pt-1 border-t border-slate-200/50 truncate">
+              <i class="fa-solid fa-location-dot text-slate-400 text-[10px]"></i>
+              <span class="truncate">{{ getAulaHorario(materia) }}</span>
+            </div>
+          </div>
+
+          <!-- Barra de Progreso Compacta -->
+          <div class="space-y-1 pt-1">
+            <div class="flex items-center justify-between text-[11px] text-slate-500 font-medium">
+              <span>Semana {{ materia.semana || 8 }} de {{ materia.totalSemanas || 16 }}</span>
+              <span class="font-bold text-slate-700">{{ getPorcentajeAvance(materia) }}%</span>
+            </div>
+            <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+              <div class="h-1.5 rounded-full {{ getColorTheme(idx).barColor }} transition-all duration-500"
+                   [style.width.%]="getPorcentajeAvance(materia)"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer Compacto con Cantidad de Actividades y Botón Ingresar -->
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2 mt-1">
+          <div class="text-[11px] text-slate-400 flex items-center gap-1.5">
+            <i class="fa-solid fa-list-check text-slate-400 text-[10px]"></i>
+            <span>{{ getCantidadActividades(materia) }} actividades</span>
+          </div>
+
+          <button type="button"
+                  class="px-3 py-1.5 bg-slate-50 group-hover:bg-accent text-slate-700 group-hover:text-white font-bold text-xs rounded-lg border border-slate-200 group-hover:border-accent transition-all flex items-center gap-1.5 shadow-2xs group-hover:shadow-xs cursor-pointer">
+            <span>Entrar</span>
+            <i class="fa-solid fa-arrow-right text-[10px] group-hover:translate-x-0.5 transition-transform"></i>
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>

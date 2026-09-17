@@ -1,0 +1,449 @@
+<div class="space-y-6" id="admin-docentes-container">
+  <!-- Cabecera de Página -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm" id="header-admin-docentes">
+    <div>
+      <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-accent mb-1">
+        <i class="fa-solid fa-user-shield"></i>
+        <span>Administración Central</span>
+      </div>
+      <h1 class="text-2xl font-bold text-slate-900 tracking-tight">{{ tituloGestion }}</h1>
+      <p class="text-sm text-slate-500 mt-1">
+        {{ subtituloGestion }}
+      </p>
+    </div>
+    <div class="flex items-center gap-3 shrink-0" *ngIf="esAdministrador">
+      <button (click)="abrirModal()"
+              id="btn-nuevo-docente"
+              class="inline-flex items-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent-hover text-white text-sm font-semibold rounded-xl shadow-sm transition-all active:scale-[0.98]">
+        <i class="fa-solid fa-user-plus text-sm"></i>
+        <span>Añadir Nuevo Docente</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Barra de Búsqueda y Filtros -->
+  <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-3 items-center justify-between" id="filtros-docentes-bar">
+    <div class="relative w-full sm:w-80">
+      <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+      <input type="text"
+             [(ngModel)]="filtroTexto"
+             (input)="aplicarFiltros()"
+             placeholder="Buscar por nombre, correo o usuario..."
+             id="input-filtro-docentes"
+             class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all">
+    </div>
+
+    <div class="flex items-center gap-2 w-full sm:w-auto">
+      <span class="text-xs text-slate-500 font-medium whitespace-nowrap">Filtrar por Rol:</span>
+      <select [(ngModel)]="filtroRol" (ngModelChange)="cargarDocentes()"
+              id="select-filtro-rol"
+              class="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-700 outline-none focus:ring-2 focus:ring-accent/20 cursor-pointer w-full sm:w-auto">
+        <option value="Todos">Todos los Docentes y Personal</option>
+        <option value="Docente">Docente</option>
+        <option value="Coordinador">Coordinador</option>
+        <option value="Administrador">Administrador</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Tabla de Docentes Registrados -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden" id="tabla-docentes-wrapper">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse" id="tabla-docentes">
+        <thead>
+          <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            <th class="py-3 px-4">Docente</th>
+            <th class="py-3 px-4">Usuario / Credencial</th>
+            <th class="py-3 px-4">Correo Institucional</th>
+            <th class="py-3 px-4">Roles y Responsabilidades</th>
+            <th class="py-3 px-4 text-center">Estado</th>
+            <th class="py-3 px-4 text-right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200 text-sm">
+          @for (doc of docentesFiltrados; track doc.id) {
+            <tr class="hover:bg-slate-50/70 transition-colors" [id]="'docente-row-' + doc.id">
+              <!-- Nombre y Avatar -->
+              <td class="py-3.5 px-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-accent text-xs shrink-0">
+                    {{ doc.nombre.charAt(0) }}{{ doc.apellido.charAt(0) }}
+                  </div>
+                  <div>
+                    <p class="font-semibold text-slate-900 leading-snug">{{ doc.nombre }} {{ doc.apellido }}</p>
+                    <span class="text-xs text-slate-500">
+                      {{ doc.titulo || doc.departamento || doc.roles?.[0] || 'Docente Titular' }}
+                    </span>
+                  </div>
+                </div>
+              </td>
+
+              <!-- Usuario -->
+              <td class="py-3.5 px-4 font-mono text-xs text-slate-700">
+                <span class="px-2 py-1 bg-slate-100 rounded text-slate-800 border border-slate-200">{{ doc.username }}</span>
+              </td>
+
+              <!-- Correo -->
+              <td class="py-3.5 px-4 text-xs text-slate-600">
+                <a [href]="'mailto:' + doc.correo" class="hover:text-accent flex items-center gap-1.5">
+                  <i class="fa-regular fa-envelope text-slate-400"></i>
+                  <span>{{ doc.correo }}</span>
+                </a>
+              </td>
+
+              <!-- Roles Badges -->
+              <td class="py-3.5 px-4">
+                <div class="flex flex-wrap gap-1.5">
+                  @for (r of doc.roles; track r) {
+                    <span [ngClass]="{
+                      'bg-indigo-50 text-indigo-700 border-indigo-200': r === 'Docente',
+                      'bg-amber-50 text-amber-700 border-amber-200': r === 'Coordinador',
+                      'bg-purple-50 text-purple-700 border-purple-200': r === 'Tribunal' || r === 'Jurado',
+                      'bg-slate-100 text-slate-700 border-slate-200': r === 'Administrador'
+                    }" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border">
+                      <i [ngClass]="{
+                        'fa-chalkboard-user': r === 'Docente',
+                        'fa-user-tie': r === 'Coordinador',
+                        'fa-gavel': r === 'Tribunal' || r === 'Jurado',
+                        'fa-user-shield': r === 'Administrador'
+                      }" class="fa-solid text-[10px]"></i>
+                      <span>{{ r }}</span>
+                    </span>
+                  }
+
+                  @if (modalRolesAbierto && docenteEditando) {
+                    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+                      <div class="bg-white w-full max-w-lg rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
+                        <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+                          <div class="flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center">
+                              <i class="fa-solid fa-user-gear"></i>
+                            </div>
+                            <div>
+                              <h2 class="text-base font-bold text-slate-900">Editar Roles de Usuario</h2>
+                              <p class="text-xs text-slate-500">{{ docenteEditando.nombre }} {{ docenteEditando.apellido }} ({{ docenteEditando.username }})</p>
+                            </div>
+                          </div>
+                          <button (click)="cerrarModalRoles()" class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+                            <i class="fa-solid fa-xmark text-lg"></i>
+                          </button>
+                        </div>
+
+                        <div class="p-6 space-y-4 overflow-y-auto">
+                          <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-blue-800">
+                            Se enviará <strong>PUT /api/roles/{{ docenteEditando.id }}</strong> con el body de roles permitido.
+                          </div>
+
+                          <div class="space-y-2">
+                            @for (rol of rolesPermitidosParaGestion; track rol) {
+                              <label class="flex items-center gap-3 p-2.5 bg-slate-50 rounded-lg border border-slate-200 cursor-pointer hover:border-slate-300">
+                                <input
+                                  type="checkbox"
+                                  class="rounded text-accent focus:ring-accent w-4 h-4"
+                                  [checked]="rolesEnEdicion.includes(rol)"
+                                  (change)="toggleRolEnEdicion(rol, $any($event.target).checked)"
+                                />
+                                <span class="text-sm font-medium text-slate-800">{{ rol }}</span>
+                              </label>
+                            }
+                          </div>
+
+                          <p class="text-[11px] text-slate-500">
+                            Reglas aplicadas en UI: Coordinador solo puede asignar Docente/Estudiante. Decano puede asignar Coordinador/Docente/Estudiante. Administrador puede asignar todos.
+                          </p>
+                        </div>
+
+                        <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3 shrink-0">
+                          <button type="button"
+                                  (click)="cerrarModalRoles()"
+                                  class="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 rounded-xl hover:bg-slate-200/60 transition-colors">
+                            Cancelar
+                          </button>
+                          <button type="button"
+                                  (click)="guardarRolesUsuario()"
+                                  [disabled]="isUpdatingRoles"
+                                  class="inline-flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover text-white text-xs font-semibold rounded-xl shadow-sm transition-all disabled:opacity-50">
+                            @if (isUpdatingRoles) {
+                              <i class="fa-solid fa-circle-notch fa-spin text-xs"></i>
+                              <span>Guardando...</span>
+                            } @else {
+                              <i class="fa-solid fa-check text-xs"></i>
+                              <span>Actualizar Roles</span>
+                            }
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  }
+                </div>
+              </td>
+
+              <!-- Estado -->
+              <td class="py-3.5 px-4 text-center">
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-200">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  <span>Activo</span>
+                </span>
+              </td>
+
+              <!-- Acciones -->
+              <td class="py-3.5 px-4 text-right">
+                <div class="flex items-center justify-end gap-1.5">
+                  <a [routerLink]="['/admin/clases']"
+                     title="Ver cátedras asignadas"
+                     class="p-1.5 text-slate-400 hover:text-accent hover:bg-slate-100 rounded-lg transition-colors">
+                    <i class="fa-solid fa-book-open"></i>
+                  </a>
+                  <button *ngIf="puedeGestionarRoles"
+                          title="Cambiar roles"
+                          [disabled]="!puedeEditarUsuario(doc)"
+                          (click)="abrirModalRoles(doc)"
+                          class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-user-gear text-[10px]"></i>
+                    <span>Cambiar roles</span>
+                  </button>
+                  <button title="Enviar credenciales por correo"
+                          (click)="mensajeExito = 'Credenciales reenviadas al correo de ' + doc.nombre"
+                          class="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">
+                    <i class="fa-solid fa-paper-plane"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="6" class="py-12 text-center text-slate-400">
+                <i class="fa-solid fa-user-slash text-3xl mb-2 text-slate-300"></i>
+                <p class="text-sm font-medium">No se encontraron docentes con los criterios seleccionados.</p>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- MODAL: AÑADIR NUEVO DOCENTE -->
+  @if (modalAbierto) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in" id="modal-nuevo-docente">
+      <div class="bg-white w-full max-w-2xl rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]"
+           (click)="$event.stopPropagation()">
+        <!-- Header Modal -->
+        <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-accent/10 text-accent flex items-center justify-center">
+              <i class="fa-solid fa-user-plus"></i>
+            </div>
+            <div>
+              <h2 class="text-base font-bold text-slate-900">Registrar Nuevo Docente</h2>
+              <p class="text-xs text-slate-500">Crea credenciales institucionales y define sus roles en el sistema</p>
+            </div>
+          </div>
+          <button (click)="cerrarModal()" class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+            <i class="fa-solid fa-xmark text-lg"></i>
+          </button>
+        </div>
+
+        <!-- Form Body -->
+        <div class="p-6 overflow-y-auto space-y-5">
+          @if (mensajeExito) {
+            <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center gap-2">
+              <i class="fa-solid fa-circle-check text-emerald-600 text-sm"></i>
+              <span>{{ mensajeExito }}</span>
+            </div>
+          }
+          @if (mensajeError) {
+            <div class="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-center gap-2">
+              <i class="fa-solid fa-circle-exclamation text-rose-600 text-sm"></i>
+              <span>{{ mensajeError }}</span>
+            </div>
+          }
+
+          <form [formGroup]="docenteForm" (ngSubmit)="guardarDocente()" id="form-docente">
+            <!-- Nombres y Apellidos -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label for="input-nombre-docente" class="block text-xs font-semibold text-slate-700 mb-1">
+                  Nombres <span class="text-rose-500">*</span>
+                </label>
+                <input type="text"
+                       id="input-nombre-docente"
+                       formControlName="nombre"
+                       (input)="actualizarSugerencias()"
+                       placeholder="Ej. Carlos Alberto"
+                       class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all">
+                @if (docenteForm.get('nombre')?.invalid && docenteForm.get('nombre')?.touched) {
+                  <p class="text-[11px] text-rose-500 mt-1">El nombre es requerido (mínimo 2 letras).</p>
+                }
+
+              </div>
+
+              <div>
+                <label for="input-apellido-docente" class="block text-xs font-semibold text-slate-700 mb-1">
+                  Apellidos <span class="text-rose-500">*</span>
+                </label>
+                <input type="text"
+                       id="input-apellido-docente"
+                       formControlName="apellido"
+                       (input)="actualizarSugerencias()"
+                       placeholder="Ej. Mendoza Paredes"
+                       class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all">
+                @if (docenteForm.get('apellido')?.invalid && docenteForm.get('apellido')?.touched) {
+                  <p class="text-[11px] text-rose-500 mt-1">El apellido es requerido.</p>
+                }
+              </div>
+            </div>
+
+            <!-- Usuario y Correo -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label for="input-username-docente" class="block text-xs font-semibold text-slate-700 mb-1">
+                  Nombre de Usuario <span class="text-rose-500">*</span>
+                </label>
+                <div class="relative">
+                  <i class="fa-solid fa-at absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                  <input type="text"
+                         id="input-username-docente"
+                         formControlName="username"
+                         placeholder="carlos.mendoza"
+                         class="w-full pl-8 pr-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 font-mono outline-none focus:bg-white focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all">
+                </div>
+                @if (docenteForm.get('username')?.invalid && docenteForm.get('username')?.touched) {
+                  <p class="text-[11px] text-rose-500 mt-1">Usuario alfanumérico requerido (mínimo 4 caracteres).</p>
+                }
+              </div>
+
+              <div>
+                <label for="input-correo-docente" class="block text-xs font-semibold text-slate-700 mb-1">
+                  Correo Institucional <span class="text-rose-500">*</span>
+                </label>
+                <div class="relative">
+                  <i class="fa-solid fa-envelope absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                  <input type="email"
+                         id="input-correo-docente"
+                         formControlName="correo"
+                         placeholder="carlos.mendoza@uteq.edu.ec"
+                         class="w-full pl-8 pr-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all">
+                </div>
+                @if (docenteForm.get('correo')?.invalid && docenteForm.get('correo')?.touched) {
+                  <p class="text-[11px] text-rose-500 mt-1">Ingrese un correo electrónico válido.</p>
+                }
+              </div>
+            </div>
+
+            <!-- Contraseña Temporal -->
+            <div class="mb-5">
+              <label for="input-password-docente" class="block text-xs font-semibold text-slate-700 mb-1">
+                Contraseña Temporal de Acceso <span class="text-rose-500">*</span>
+              </label>
+              <div class="relative">
+                <i class="fa-solid fa-key absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input type="text"
+                       id="input-password-docente"
+                       formControlName="password"
+                       class="w-full pl-8 pr-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 font-mono outline-none focus:bg-white focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all">
+              </div>
+              <p class="text-[10px] text-slate-500 mt-1">El usuario deberá actualizarla en su primer inicio de sesión.</p>
+            </div>
+
+            <!-- ASIGNACIÓN DE RESPONSABILIDADES (ROLES MULTIPLES) -->
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+              <div class="flex items-center gap-2">
+                <i class="fa-solid fa-network-wired text-accent text-sm"></i>
+                <span class="text-xs font-bold text-slate-900 uppercase tracking-wider">Asignación de Responsabilidades y Roles</span>
+              </div>
+              <p class="text-[11px] text-slate-500">
+                Seleccione todas las funciones que desempeñará este profesor. SIGAC opera con un modelo inclusivo que permite simultaneidad de roles.
+              </p>
+
+              <div class="space-y-2.5 pt-1">
+                <!-- Checkbox 1: Docente de Cátedra -->
+                <label class="flex items-start gap-3 p-2.5 bg-white rounded-lg border border-slate-200 cursor-pointer hover:border-slate-300 transition-colors">
+                  <input type="checkbox"
+                         formControlName="rolDocente"
+                         id="chk-rol-docente"
+                         class="mt-0.5 rounded text-accent focus:ring-accent w-4 h-4 cursor-pointer">
+                  <div class="text-xs">
+                    <span class="font-bold text-slate-800 flex items-center gap-1.5">
+                      <i class="fa-solid fa-chalkboard-user text-indigo-600"></i>
+                      Docente de Cátedra
+                      <span class="text-[10px] text-accent bg-accent/10 px-1.5 py-0.2 rounded font-semibold uppercase">Principal</span>
+                    </span>
+                    <p class="text-slate-500 text-[11px] mt-0.5">Responsable de impartir asignaturas, subir sílabos y calificar evaluaciones formativas.</p>
+                  </div>
+                </label>
+
+                <!-- Checkbox 2: Coordinador de Carrera -->
+                <label class="flex items-start gap-3 p-2.5 bg-white rounded-lg border border-slate-200 cursor-pointer hover:border-slate-300 transition-colors">
+                  <input type="checkbox"
+                         formControlName="rolCoordinador"
+                         id="chk-rol-coordinador"
+                         class="mt-0.5 rounded text-accent focus:ring-accent w-4 h-4 cursor-pointer">
+                  <div class="text-xs">
+                    <span class="font-bold text-slate-800 flex items-center gap-1.5">
+                      <i class="fa-solid fa-user-tie text-amber-600"></i>
+                      Coordinador de Carrera
+                    </span>
+                    <p class="text-slate-500 text-[11px] mt-0.5">Habilita la validación normativa de postulantes de ayudantía, configuración de notas y convocatoria de tribunales.</p>
+                  </div>
+                </label>
+
+                <!-- Checkbox 3: Miembro de Tribunal Evaluador -->
+                <label class="flex items-start gap-3 p-2.5 bg-white rounded-lg border border-slate-200 cursor-pointer hover:border-slate-300 transition-colors">
+                  <input type="checkbox"
+                         formControlName="rolTribunal"
+                         id="chk-rol-tribunal"
+                         class="mt-0.5 rounded text-accent focus:ring-accent w-4 h-4 cursor-pointer">
+                  <div class="text-xs">
+                    <span class="font-bold text-slate-800 flex items-center gap-1.5">
+                      <i class="fa-solid fa-gavel text-purple-600"></i>
+                      Miembro de Tribunal Evaluador
+                    </span>
+                    <p class="text-slate-500 text-[11px] mt-0.5">Permite integrar mesas evaluadoras, calificar sustentaciones de sílabo mediante rúbricas y emitir dictámenes.</p>
+                  </div>
+                </label>
+
+                <!-- Checkbox 4: Jurado (rol separado) -->
+                <label class="flex items-start gap-3 p-2.5 bg-white rounded-lg border border-slate-200 cursor-pointer hover:border-slate-300 transition-colors">
+                  <input type="checkbox"
+                         formControlName="rolJurado"
+                         id="chk-rol-jurado"
+                         class="mt-0.5 rounded text-accent focus:ring-accent w-4 h-4 cursor-pointer">
+                  <div class="text-xs">
+                    <span class="font-bold text-slate-800 flex items-center gap-1.5">
+                      <i class="fa-solid fa-gavel text-purple-600"></i>
+                      Jurado
+                    </span>
+                    <p class="text-slate-500 text-[11px] mt-0.5">Asignar como jurado para evaluaciones puntuales sin ser miembro permanente del tribunal.</p>
+                  </div>
+                </label>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- Footer Modal -->
+        <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3 shrink-0">
+          <button type="button"
+                  (click)="cerrarModal()"
+                  class="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 rounded-xl hover:bg-slate-200/60 transition-colors">
+            Cancelar
+          </button>
+          <button type="button"
+                  (click)="guardarDocente()"
+                  [disabled]="isSubmitting"
+                  id="btn-confirmar-guardar-docente"
+                  class="inline-flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover text-white text-xs font-semibold rounded-xl shadow-sm transition-all disabled:opacity-50">
+            @if (isSubmitting) {
+              <i class="fa-solid fa-circle-notch fa-spin text-xs"></i>
+              <span>Registrando...</span>
+            } @else {
+              <i class="fa-solid fa-check text-xs"></i>
+              <span>Crear y Notificar Docente</span>
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

@@ -1,0 +1,248 @@
+<aside class="w-full bg-white flex flex-col shrink-0 z-20 relative border-l border-slate-200 h-full overflow-hidden"
+       id="panel-notificaciones-sidebar">
+
+  <div class="h-[72px] flex items-center justify-between px-5 shrink-0 border-b border-slate-200 bg-white">
+    <div class="flex items-center gap-2.5">
+
+      <div class="w-8 h-8 rounded-xl bg-accent/10 text-accent flex items-center justify-center text-sm">
+        <i class="fa-regular fa-bell"></i>
+      </div>
+
+      <div>
+        <h2 class="text-sm font-bold text-slate-900 leading-tight">
+          Centro de Avisos
+        </h2>
+
+        <span class="text-[10px] text-slate-400 font-medium block">
+          {{ pendientesCount }}
+          aviso{{ pendientesCount === 1 ? '' : 's' }}
+          sin revisar
+        </span>
+      </div>
+    </div>
+
+    <button *ngIf="pendientesCount > 0"
+            type="button"
+            (click)="marcarTodasComoLeidas()"
+            class="text-[11px] font-semibold text-accent hover:underline cursor-pointer">
+
+      Marcar leídas
+    </button>
+  </div>
+
+  <div class="px-5 pt-4 pb-2 shrink-0 flex items-center gap-2">
+
+    <button type="button"
+            (click)="filtro = 'todas'"
+            class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer"
+            [ngClass]="filtro === 'todas'
+              ? 'bg-slate-100 text-slate-900'
+              : 'text-slate-500 hover:text-slate-800'">
+
+      Todas ({{ notificaciones.length }})
+    </button>
+
+    <button type="button"
+            (click)="filtro = 'pendientes'"
+            class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5"
+            [ngClass]="filtro === 'pendientes'
+              ? 'bg-blue-50 text-blue-700 border border-blue-200'
+              : 'text-slate-500 hover:text-slate-800'">
+
+      <span>Sin leer</span>
+
+      <span *ngIf="pendientesCount > 0"
+            class="w-4 h-4 rounded-full bg-blue-600 text-white text-[10px] flex items-center justify-center font-bold">
+
+        {{ pendientesCount }}
+      </span>
+    </button>
+  </div>
+
+  <div class="flex-1 overflow-y-auto px-5 py-3 space-y-3">
+
+    <div *ngIf="cargandoNotificaciones"
+         class="text-center py-12 text-slate-400 text-xs">
+
+      <i class="fa-solid fa-spinner fa-spin text-xl mb-3 block"></i>
+
+      Cargando avisos...
+    </div>
+
+    <div *ngIf="!cargandoNotificaciones && errorNotificaciones"
+         class="rounded-xl border border-red-200 bg-red-50 p-4 text-xs text-red-700">
+
+      <div class="flex items-start gap-2">
+        <i class="fa-solid fa-circle-exclamation mt-0.5"></i>
+
+        <span>
+          {{ errorNotificaciones }}
+        </span>
+      </div>
+
+      <button type="button"
+              (click)="recargarNotificaciones()"
+              class="mt-3 text-xs font-bold text-red-700 hover:underline">
+
+        Reintentar
+      </button>
+    </div>
+
+    <div *ngIf="!cargandoNotificaciones &&
+                !errorNotificaciones &&
+                notificacionesFiltradas.length === 0"
+         class="text-center py-12 text-slate-400 text-xs">
+
+      <i class="fa-regular fa-bell-slash text-2xl mb-2 block"></i>
+
+      No hay actualizaciones del cronograma.
+    </div>
+
+    <div *ngFor="let noti of notificacionesFiltradas"
+         class="group border rounded-2xl p-4 shadow-2xs hover:shadow-md transition-all duration-200 cursor-pointer relative flex flex-col justify-between space-y-2.5"
+         [ngClass]="noti.leida
+           ? 'bg-white border-slate-200/80 text-slate-600'
+           : 'bg-amber-50/40 border-amber-200 text-slate-900'"
+         (click)="abrirNotificacion(noti)">
+
+      <span *ngIf="!noti.leida"
+            class="absolute top-3.5 right-3.5 w-2 h-2 rounded-full bg-amber-500">
+      </span>
+
+      <div class="flex items-center justify-between gap-2 pr-4">
+
+        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 truncate">
+          {{ noti.materiaNombre }}
+        </span>
+
+        <span class="text-[10px] text-slate-400 shrink-0 font-medium">
+          {{ noti.fecha }}
+        </span>
+      </div>
+
+      <div>
+        <h4 class="text-xs font-bold leading-snug text-slate-900 group-hover:text-amber-700 transition-colors">
+          {{ noti.titulo }}
+        </h4>
+
+        <p class="text-[11px] text-slate-500 mt-1 line-clamp-2 leading-relaxed">
+          {{ noti.descripcion }}
+        </p>
+      </div>
+
+      <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+
+        <span class="text-[10px] px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1.5 bg-amber-50 text-amber-700 border border-amber-200">
+
+          <i class="fa-solid fa-calendar-days text-[9px]"></i>
+
+          Cronograma
+        </span>
+
+        <div class="flex items-center gap-2">
+
+          <span class="text-[10px] font-bold text-amber-700 flex items-center gap-1">
+
+            Ver detalle
+
+            <i class="fa-solid fa-arrow-right text-[9px]"></i>
+          </span>
+
+          <button type="button"
+                  (click)="toggleLeida($event, noti)"
+                  [title]="noti.leida ? 'Marcar como no leída' : 'Marcar como leída'"
+                  class="text-slate-400 hover:text-slate-700 p-1 text-xs transition-colors cursor-pointer">
+
+            <i class="fa-solid fa-check"
+               [ngClass]="noti.leida
+                 ? 'text-emerald-600'
+                 : 'text-slate-300'">
+            </i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Solo se usa si el backend no puede resolver MateriaId -->
+  <div *ngIf="modalAbierto && notificacionSeleccionada"
+       class="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4"
+       (click)="cerrarModal()">
+
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200"
+         (click)="$event.stopPropagation()">
+
+      <div class="flex items-start justify-between gap-4 pb-4 border-b border-slate-100">
+
+        <div>
+          <p class="text-[10px] font-bold uppercase tracking-wider text-amber-700">
+            {{ notificacionSeleccionada.materiaNombre }}
+          </p>
+
+          <h3 class="text-lg font-bold text-slate-900 mt-1">
+            Cronograma actualizado
+          </h3>
+        </div>
+
+        <button type="button"
+                (click)="cerrarModal()"
+                class="w-8 h-8 rounded-lg text-slate-400 hover:bg-slate-100">
+
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="py-5 space-y-4">
+
+        <div>
+          <p class="text-[11px] font-bold uppercase tracking-wide text-slate-400">
+            Actividad
+          </p>
+
+          <p class="text-sm font-semibold text-slate-900 mt-1">
+            {{ notificacionSeleccionada.actividad }}
+          </p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+
+            <p class="text-[11px] font-bold uppercase text-slate-400">
+              Fecha anterior
+            </p>
+
+            <p class="text-sm font-semibold text-slate-700 mt-1">
+              {{ notificacionSeleccionada.fechaAnterior | date:'dd/MM/yyyy' }}
+            </p>
+          </div>
+
+          <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+
+            <p class="text-[11px] font-bold uppercase text-emerald-600">
+              Nueva fecha
+            </p>
+
+            <p class="text-sm font-semibold text-emerald-800 mt-1">
+              {{ notificacionSeleccionada.fechaNueva | date:'dd/MM/yyyy' }}
+            </p>
+          </div>
+        </div>
+
+        <div>
+          <p class="text-[11px] font-bold uppercase tracking-wide text-slate-400">
+            Motivo
+          </p>
+
+          <p class="text-sm text-slate-700 mt-1 whitespace-pre-line">
+            {{ notificacionSeleccionada.observacion }}
+          </p>
+        </div>
+
+        <p class="text-[11px] text-slate-400">
+          No se pudo resolver la materia para redireccionar automáticamente.
+        </p>
+      </div>
+    </div>
+  </div>
+</aside>

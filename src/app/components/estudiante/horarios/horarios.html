@@ -1,0 +1,344 @@
+<div class="p-4 md:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto" id="horarios-container">
+  
+  <!-- CABECERA PRINCIPAL -->
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white border border-slate-200 rounded-2xl p-5 md:p-6 shadow-xs">
+    <div>
+      <div class="flex items-center gap-2 mb-1.5">
+        <span *ngIf="esModoAyudante" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-50 text-teal-700 border border-teal-200">
+          <i class="fa-solid fa-chalkboard-user text-[11px]"></i> Horario de Ayudante de Cátedra
+        </span>
+        <span *ngIf="!esModoAyudante" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+          <i class="fa-regular fa-calendar-check text-[11px]"></i> Planificación Semanal
+        </span>
+        <span class="text-xs text-slate-400 font-medium">Ciclo 2026-2</span>
+      </div>
+      <h1 class="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">
+        {{ esModoAyudante ? 'Mi Horario de Clases (Ayudantía)' : 'Horario de Clases y Sesiones' }}
+      </h1>
+      <p class="text-slate-500 text-xs md:text-sm mt-1">
+        {{ esModoAyudante ? 'Consulta las horas y aulas exactas donde estás ocupado impartiendo clases a tu curso asignado.' : 'Consulta la distribución semanal de tus cátedras, aulas asignadas y salas virtuales.' }}
+      </p>
+    </div>
+
+    <!-- Controles y Filtros -->
+    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+      
+      <!-- Alternador de vista Cuadrícula / Agenda -->
+      <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+        <button type="button"
+                (click)="vistaActiva = 'semanal'"
+                class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5"
+                [ngClass]="vistaActiva === 'semanal' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'">
+          <i class="fa-solid fa-table-cells"></i>
+          <span>Cuadrícula</span>
+        </button>
+        <button type="button"
+                (click)="vistaActiva = 'agenda'"
+                class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5"
+                [ngClass]="vistaActiva === 'agenda' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'">
+          <i class="fa-solid fa-list-ul"></i>
+          <span>Agenda</span>
+        </button>
+      </div>
+
+      <!-- Selector de Clase -->
+      <div class="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-2xs">
+        <label for="selectorClase" class="text-xs font-semibold text-slate-600 shrink-0 flex items-center gap-1.5">
+          <i class="fa-solid fa-filter text-accent text-[11px]"></i>
+          <span class="hidden sm:inline">{{ esModoAyudante ? 'Curso:' : 'Clase:' }}</span>
+        </label>
+        <select id="selectorClase"
+                [ngModel]="claseSeleccionadaId"
+                (ngModelChange)="onClaseSelectorChange($event)"
+                class="bg-transparent text-xs font-medium text-slate-800 focus:outline-none cursor-pointer pr-2 min-w-[160px]">
+          <option value="todas">{{ esModoAyudante ? 'Todas mis clases de ayudantía' : 'Todas las Clases' }}</option>
+          <option *ngFor="let c of clasesFiltradasParaSelector" [value]="c.id">
+            {{ c.nombre }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Botón para docentes/admin únicamente (NO para ayudante) -->
+      <button *ngIf="!esModoAyudante && esDocenteOAdmin" (click)="crearClase()"
+              class="py-2 px-4 bg-accent text-white rounded-xl hover:bg-accent-hover transition-colors font-medium text-xs shadow-xs flex items-center justify-center gap-1.5">
+        <i class="fa-solid fa-plus text-[10px]"></i>
+        <span>Crear Clase</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- TARJETAS DE RESUMEN MÉTRICO -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4" id="metricas-horario">
+    <div class="bg-white border border-slate-200 rounded-2xl p-4 flex items-center gap-3.5 shadow-xs">
+      <div class="w-11 h-11 rounded-xl bg-teal-50 text-teal-600 border border-teal-100 flex items-center justify-center text-lg shrink-0"
+           *ngIf="esModoAyudante">
+        <i class="fa-solid fa-chalkboard-user"></i>
+      </div>
+      <div class="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center text-lg shrink-0"
+           *ngIf="!esModoAyudante">
+        <i class="fa-solid fa-book-open"></i>
+      </div>
+      <div>
+        <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+          {{ esModoAyudante ? 'Sesiones Asignadas' : 'Cátedras Registradas' }}
+        </span>
+        <span class="text-xl font-bold text-slate-900 leading-tight block">{{ horariosFiltrados.length }} Bloques Semanales</span>
+      </div>
+    </div>
+
+    <div class="bg-white border border-slate-200 rounded-2xl p-4 flex items-center gap-3.5 shadow-xs">
+      <div class="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center text-lg shrink-0">
+        <i class="fa-regular fa-clock"></i>
+      </div>
+      <div>
+        <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+          {{ esModoAyudante ? 'Horas Ocupadas en Clase' : 'Carga Semanal' }}
+        </span>
+        <span class="text-xl font-bold text-slate-900 leading-tight block">{{ getTotalHorasSemanales() }} Horas Lectivas</span>
+      </div>
+    </div>
+
+    <!-- Si es ayudante: tarjeta de su curso a cargo -->
+    <div class="bg-white border border-slate-200 rounded-2xl p-4 flex items-center gap-3.5 shadow-xs" *ngIf="esModoAyudante">
+      <div class="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center text-lg shrink-0">
+        <i class="fa-solid fa-graduation-cap"></i>
+      </div>
+      <div class="min-w-0">
+        <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Curso Asignado</span>
+        <span class="text-xs font-bold text-slate-900 truncate block">{{ nombreCursoAsignado }}</span>
+        <span class="text-[11px] text-teal-600 font-semibold block">Cátedra Activa</span>
+      </div>
+    </div>
+
+    <!-- Si no es ayudante: próxima clase general -->
+    <div class="bg-white border border-slate-200 rounded-2xl p-4 flex items-center gap-3.5 shadow-xs" *ngIf="!esModoAyudante && getProximaClase() as prox">
+      <div class="w-11 h-11 rounded-xl bg-purple-50 text-purple-600 border border-purple-100 flex items-center justify-center text-lg shrink-0">
+        <i class="fa-solid fa-calendar-day"></i>
+      </div>
+      <div class="min-w-0">
+        <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Próxima Sesión</span>
+        <span class="text-xs font-bold text-slate-900 truncate block">{{ prox.materia }}</span>
+        <span class="text-[11px] text-slate-500 block">{{ prox.dia }} · {{ prox.horaInicio }} hrs</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- BANNER CONTEXTUAL CUANDO HAY UNA CLASE PRE-SELECCIONADA -->
+  <div *ngIf="claseSeleccionadaInfo"
+       class="p-4 rounded-2xl bg-blue-50/60 border border-blue-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 text-base shadow-xs">
+        <i class="fa-solid fa-graduation-cap"></i>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-bold text-blue-700 uppercase tracking-wider">Filtro Contextual Activo</span>
+          <span class="text-[11px] text-slate-500 font-mono bg-white px-2 py-0.5 rounded-md border border-slate-200">ID: #{{ claseSeleccionadaInfo.id }}</span>
+        </div>
+        <h3 class="text-sm font-bold text-slate-900 mt-0.5">{{ claseSeleccionadaInfo.nombre }}</h3>
+        <p class="text-xs text-slate-600">{{ claseSeleccionadaInfo.materia }}</p>
+      </div>
+    </div>
+
+    <button (click)="limpiarFiltroClase()"
+            class="px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-2xs">
+      <i class="fa-solid fa-xmark text-slate-400"></i>
+      <span>Ver todos los horarios</span>
+    </button>
+  </div>
+
+  <!-- ================= VISTA 1: CUADRÍCULA SEMANAL ================= -->
+  <div *ngIf="vistaActiva === 'semanal'" class="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-xs">
+    <div class="overflow-x-auto">
+      <div class="grid" [style.gridTemplateColumns]="'80px repeat(' + dias.length + ', minmax(180px, 1fr))'">
+        
+        <!-- Encabezado de Hora -->
+        <div class="bg-slate-50/90 border-b border-slate-200 p-3 text-[11px] font-bold text-slate-400 uppercase flex items-center justify-center">
+          Hora
+        </div>
+        
+        <!-- Encabezados de Días -->
+        <div *ngFor="let d of dias" class="bg-slate-50/90 border-b border-slate-200 border-l border-slate-200 p-3 text-center">
+          <span class="text-xs font-bold text-slate-800 uppercase tracking-wide block">{{ d }}</span>
+          <span class="text-[10px] text-slate-400 font-medium">Jornada Académica</span>
+        </div>
+
+        <!-- Filas de horas -->
+        <ng-container *ngFor="let h of horas">
+          <!-- Columna Izquierda: Franja horaria -->
+          <div class="border-b border-slate-100 p-3 text-xs font-mono font-semibold text-slate-500 flex items-start justify-center min-h-[92px] bg-slate-50/40">
+            {{ h }}
+          </div>
+
+          <!-- Columnas de Días -->
+          <div *ngFor="let d of dias" class="border-b border-slate-100 border-l border-slate-100 relative min-h-[92px] p-1.5 transition-colors">
+            
+            <!-- Bloque de Clase si existe (Ocupado impartiendo clase) -->
+            <ng-container *ngIf="getClaseEnCelda(d, h) as clase">
+              <div class="w-full h-full rounded-xl p-3 border text-left flex flex-col justify-between transition-all duration-150 shadow-2xs"
+                   [ngClass]="esModoAyudante ? 'bg-teal-50/95 border-teal-300 text-teal-950 hover:border-teal-400' : getTemaMateria(clase.materia).cardBg">
+                
+                <div>
+                  <div class="flex items-center justify-between gap-1 mb-1">
+                    <span *ngIf="esModoAyudante" class="inline-flex items-center gap-1 text-[9px] font-bold text-teal-900 bg-teal-100/90 px-1.5 py-0.5 rounded border border-teal-200 uppercase tracking-wide">
+                      <i class="fa-solid fa-clock text-[9px] text-teal-700"></i> Ocupado · Clase
+                    </span>
+                    <span *ngIf="!esModoAyudante" class="text-xs font-bold leading-tight block">
+                      {{ clase.materia }}
+                    </span>
+
+                    <span *ngIf="clase.plataforma" class="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-700 bg-blue-100/80 px-1.5 py-0.5 rounded shrink-0">
+                      <i class="fa-solid fa-video text-[9px]"></i> Virtual
+                    </span>
+                    <span *ngIf="clase.aula" class="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-700 bg-slate-200/80 px-1.5 py-0.5 rounded shrink-0">
+                      <i class="fa-solid fa-building text-[9px]"></i> Aula
+                    </span>
+                  </div>
+
+                  <h4 *ngIf="esModoAyudante" class="text-xs font-bold text-slate-900 leading-tight block mt-0.5">
+                    {{ clase.materia }}
+                  </h4>
+
+                  <p class="text-[11px] font-medium text-teal-800 mt-0.5" *ngIf="esModoAyudante">
+                    Ing. de Software (Grupo A)
+                  </p>
+
+                  <p class="text-[11px] text-slate-600 flex items-center gap-1 truncate mt-1" *ngIf="clase.docente">
+                    <i class="fa-solid fa-chalkboard-user text-slate-400 text-[10px]"></i>
+                    {{ clase.docente }}
+                  </p>
+                </div>
+
+                <div class="flex items-center justify-between pt-2 border-t border-black/5 text-[11px] font-medium mt-1">
+                  <span class="font-mono font-bold" [ngClass]="esModoAyudante ? 'text-teal-900' : ''">{{ clase.horaInicio }} - {{ clase.horaFin }}</span>
+                  <span class="text-[10px] text-slate-500 truncate max-w-[90px]">
+                    {{ clase.aula || clase.plataforma || 'Presencial' }}
+                  </span>
+                </div>
+              </div>
+            </ng-container>
+
+            <!-- Celda vacía para Ayudante: Solo muestra 'Libre' sin click ni selección -->
+            <div *ngIf="!getClaseEnCelda(d, h) && esModoAyudante"
+                 class="w-full h-full rounded-xl border border-dashed border-slate-100 flex items-center justify-center text-[10px] text-slate-300 font-medium select-none min-h-[80px]">
+              Libre
+            </div>
+
+            <!-- Celda vacía interactiva para Docente/Admin -->
+            <div *ngIf="!getClaseEnCelda(d, h) && !esModoAyudante"
+                 (click)="toggleHora(d, h)"
+                 class="w-full h-full rounded-xl border-2 border-transparent transition-all flex items-center justify-center text-xs font-medium min-h-[80px]"
+                 [ngClass]="{
+                   'cursor-pointer': esDocenteOAdmin,
+                   'bg-accent/10 border-accent border-dashed text-accent font-bold': esDocenteOAdmin && seleccionadas.has(d + '|' + h),
+                   'hover:bg-slate-50 hover:border-slate-200': esDocenteOAdmin && !seleccionadas.has(d + '|' + h),
+                   'cursor-default': !esDocenteOAdmin
+                 }">
+              <span *ngIf="esDocenteOAdmin && seleccionadas.has(d + '|' + h)" class="text-xs text-accent flex items-center gap-1">
+                <i class="fa-solid fa-check text-[10px]"></i> Seleccionado
+              </span>
+            </div>
+          </div>
+        </ng-container>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= VISTA 2: AGENDA POR DÍAS ================= -->
+  <div *ngIf="vistaActiva === 'agenda'" class="space-y-4" id="agenda-dias-container">
+    <div *ngFor="let d of dias" class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
+      <div class="px-5 py-3.5 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i class="fa-regular fa-calendar text-slate-400 text-xs"></i>
+          <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wide">{{ d }}</h3>
+        </div>
+        <span class="text-xs font-semibold text-slate-500">
+          {{ getHorariosPorDia(d).length }} {{ getHorariosPorDia(d).length === 1 ? (esModoAyudante ? 'sesión ocupada' : 'clase') : (esModoAyudante ? 'sesiones ocupadas' : 'clases') }}
+        </span>
+      </div>
+
+      <div class="p-4 md:p-5">
+        <!-- Sin clases este día -->
+        <div *ngIf="getHorariosPorDia(d).length === 0" class="py-4 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
+          <i class="fa-regular fa-circle-check text-slate-300"></i>
+          <span>{{ esModoAyudante ? 'No tienes clases que impartir este día (Tiempo libre)' : 'No hay sesiones académicas programadas para este día' }}</span>
+        </div>
+
+        <!-- Clases del día -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3" *ngIf="getHorariosPorDia(d).length > 0">
+          <div *ngFor="let c of getHorariosPorDia(d)"
+               class="p-4 rounded-xl border flex items-start justify-between gap-4 transition-all"
+               [ngClass]="esModoAyudante ? 'bg-teal-50/90 border-teal-200 text-teal-950' : getTemaMateria(c.materia).cardBg">
+            
+            <div class="space-y-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span *ngIf="esModoAyudante" class="inline-flex items-center gap-1 text-[9px] font-bold text-teal-900 bg-teal-100 px-2 py-0.5 rounded-full border border-teal-200 uppercase">
+                  <i class="fa-solid fa-clock text-[9px]"></i> Ocupado
+                </span>
+                <h4 class="text-sm font-bold leading-tight">{{ c.materia }}</h4>
+                <span *ngIf="c.plataforma" class="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-700 bg-blue-100/80 px-2 py-0.5 rounded-full">
+                  <i class="fa-solid fa-video text-[9px]"></i> Virtual
+                </span>
+                <span *ngIf="c.aula" class="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-700 bg-slate-200/80 px-2 py-0.5 rounded-full">
+                  <i class="fa-solid fa-building text-[9px]"></i> {{ c.aula }}
+                </span>
+              </div>
+
+              <p class="text-xs font-semibold text-teal-800" *ngIf="esModoAyudante">
+                Curso: Ingeniería de Software 2026-2 (Grupo A)
+              </p>
+
+              <p class="text-xs text-slate-600 flex items-center gap-1.5" *ngIf="c.docente">
+                <i class="fa-solid fa-chalkboard-user text-slate-400"></i>
+                <span>Docente Titular: <strong>{{ c.docente }}</strong></span>
+              </p>
+
+              <p class="text-xs text-slate-500" *ngIf="c.plataforma">
+                <i class="fa-solid fa-link text-slate-400 mr-1"></i>
+                <span>Plataforma: {{ c.plataforma }}</span>
+              </p>
+            </div>
+
+            <div class="text-right shrink-0 bg-white/80 border border-slate-200/60 px-3 py-1.5 rounded-xl shadow-2xs">
+              <span class="text-xs font-mono font-bold text-slate-900 block">{{ c.horaInicio }} - {{ c.horaFin }}</span>
+              <span class="text-[10px] text-slate-500 font-medium block">{{ getHorasDuracion(c) }} hrs</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTA EXCLUSIVA DE VISUALIZACIÓN PARA AYUDANTE -->
+  <div *ngIf="esModoAyudante"
+       class="p-4 bg-teal-50/80 rounded-2xl flex items-center gap-3.5 border border-teal-200/80 text-teal-900 text-xs shadow-2xs">
+    <div class="w-9 h-9 rounded-xl bg-teal-600 text-white flex items-center justify-center shrink-0 text-sm shadow-xs">
+      <i class="fa-solid fa-shield-halved"></i>
+    </div>
+    <p class="leading-relaxed">
+      <strong>Horario de dedicación docente:</strong> Este calendario presenta exclusivamente las horas y el curso donde debes impartir clases y talleres (<strong>Cálculo Avanzado - Grupo A</strong>). Las demás franjas de la semana corresponden a tu tiempo disponible.
+    </p>
+  </div>
+
+  <!-- RESUMEN DE SELECCIÓN PARA DOCENTE / ADMIN -->
+  <div *ngIf="!esModoAyudante && esDocenteOAdmin && seleccionadas.size > 0"
+       class="p-4 bg-slate-50 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border border-slate-200 animate-fade-in">
+    <div>
+      <p class="text-xs font-semibold text-slate-700">Franjas horarias seleccionadas para nueva clase:</p>
+      <div class="flex flex-wrap gap-1.5 mt-1.5">
+        <span *ngFor="let key of seleccionadas"
+              class="px-2.5 py-1 bg-accent/10 text-accent border border-accent/20 rounded-lg text-xs font-semibold">
+          {{ key.replace('|', ' · ') }}
+        </span>
+      </div>
+    </div>
+
+    <button (click)="crearClase()"
+            class="px-4 py-2 bg-accent text-white text-xs font-semibold rounded-xl hover:bg-accent-hover transition-colors shadow-xs shrink-0 flex items-center gap-1.5">
+      <i class="fa-solid fa-plus text-[10px]"></i>
+      <span>Continuar con Creación</span>
+    </button>
+  </div>
+
+</div>

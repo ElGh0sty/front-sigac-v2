@@ -1,0 +1,1033 @@
+<div class="min-h-screen bg-slate-50/60 pb-16">
+  
+  <!-- CABECERA PRINCIPAL DEL PORTAL DE AYUDANTE -->
+  <header class="bg-white border-b border-slate-200/80 sticky top-0 z-20 backdrop-blur-md bg-white/90">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      
+      <!-- Fila superior: Título, selector de Cátedra y badge de estado -->
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Ayudantía Activa
+            </span>
+            <span class="text-xs font-semibold text-slate-500">Período Académico 2026-2</span>
+          </div>
+          <h1 class="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
+            <i class="fa-solid fa-chalkboard-user text-accent"></i>
+            Portal del Ayudante de Cátedra
+          </h1>
+          <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
+            Gestión formativa, asistencia de estudiantes, directrices pedagógicas y evaluación.
+          </p>
+        </div>
+
+        <!-- Selector de Cátedra Asignada -->
+        <div class="flex items-center gap-3">
+          <div class="bg-slate-50 border border-slate-200 rounded-2xl p-1.5 flex items-center gap-2">
+            <span class="text-xs font-bold text-slate-500 pl-2">Cátedra:</span>
+            <select [ngModel]="materiaSeleccionadaId" (ngModelChange)="seleccionarMateria($event)"
+                    class="bg-white border border-slate-200 text-xs sm:text-sm font-bold text-slate-800 rounded-xl px-3 py-1.5 focus:ring-2 focus:ring-accent/20 outline-none transition-all cursor-pointer">
+              <option *ngFor="let m of materias" [value]="m.id">
+                {{ m.codigo }} - {{ m.nombre }} ({{ m.grupo || 'Grupo Diurno' }})
+              </option>
+            </select>
+          </div>
+
+          <a [routerLink]="['/ayudante/materia', materiaSeleccionadaId]"
+             class="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-accent hover:text-accent-hover bg-accent/10 hover:bg-accent/15 px-3 py-2 rounded-xl transition-colors">
+            <i class="fa-solid fa-up-right-from-square"></i>
+            Vista Detallada
+          </a>
+        </div>
+      </div>
+
+      <!-- Tarjeta Resumen de la Cátedra Actual -->
+      <div *ngIf="materiaSeleccionada" class="mt-4 p-3.5 sm:p-4 bg-slate-50/80 border border-slate-200/90 rounded-2xl flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-accent text-white flex items-center justify-center font-bold text-sm shadow-sm">
+            {{ materiaSeleccionada.codigo }}
+          </div>
+          <div>
+            <h2 class="text-sm sm:text-base font-bold text-slate-900">{{ materiaSeleccionada.nombre }}</h2>
+            <p class="text-xs text-slate-500">
+              Docente Titular: <strong class="text-slate-700">{{ materiaSeleccionada.docente }}</strong> &bull; {{ materiaSeleccionada.claseNombre || 'Ingeniería de Software' }}
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-4 text-xs font-medium text-slate-600">
+          <div class="flex items-center gap-1.5">
+            <i class="fa-solid fa-users text-slate-400"></i>
+            <span><strong>{{ materiaSeleccionada.estudiantes?.length || 24 }}</strong> Estudiantes Matriculados</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <i class="fa-solid fa-clock text-slate-400"></i>
+            <span>Horas Registradas: <strong class="text-emerald-700">45 / 80 hrs</strong></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navegación por Pestañas (Homologada con el Docente) -->
+      <nav class="flex space-x-1 mt-4 border-b border-slate-200/80 overflow-x-auto no-scrollbar" aria-label="Tabs">
+        
+        <button (click)="cambiarTab('catedra')"
+                class="whitespace-nowrap py-3 px-3.5 border-b-2 font-bold text-xs sm:text-sm flex items-center gap-2 transition-all cursor-pointer"
+                [ngClass]="tabActiva === 'catedra' ? 'border-accent text-accent' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'">
+          <i class="fa-solid fa-graduation-cap"></i>
+          Mi Cátedra
+        </button>
+
+        <button (click)="cambiarTab('horario')"
+                class="whitespace-nowrap py-3 px-3.5 border-b-2 font-bold text-xs sm:text-sm flex items-center gap-2 transition-all cursor-pointer"
+                [ngClass]="tabActiva === 'horario' ? 'border-accent text-accent' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'">
+          <i class="fa-solid fa-calendar-days"></i>
+          Mi Horario de Clases
+        </button>
+
+        <button (click)="cambiarTab('silabo')"
+                class="whitespace-nowrap py-3 px-3.5 border-b-2 font-bold text-xs sm:text-sm flex items-center gap-2 transition-all cursor-pointer"
+                [ngClass]="tabActiva === 'silabo' ? 'border-accent text-accent' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'">
+          <i class="fa-solid fa-list-check"></i>
+          Sílabo y Directrices
+          <span class="px-1.5 py-0.5 rounded-full text-[10px] bg-indigo-50 text-indigo-700 font-bold border border-indigo-200">
+            {{ silaboDirectrices.length }}
+          </span>
+        </button>
+
+        <button (click)="cambiarTab('asistencia')"
+                class="whitespace-nowrap py-3 px-3.5 border-b-2 font-bold text-xs sm:text-sm flex items-center gap-2 transition-all cursor-pointer"
+                [ngClass]="tabActiva === 'asistencia' ? 'border-accent text-accent' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'">
+          <i class="fa-solid fa-clipboard-user"></i>
+          Control de Asistencia
+          <span class="px-1.5 py-0.5 rounded-full text-[10px] bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+            20+ Alumnos
+          </span>
+        </button>
+
+        <button (click)="cambiarTab('recursos')"
+                class="whitespace-nowrap py-3 px-3.5 border-b-2 font-bold text-xs sm:text-sm flex items-center gap-2 transition-all cursor-pointer"
+                [ngClass]="tabActiva === 'recursos' ? 'border-accent text-accent' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'">
+          <i class="fa-solid fa-folder-open"></i>
+          Recursos y Actividades
+          <span class="px-1.5 py-0.5 rounded-full text-[10px] bg-amber-50 text-amber-700 font-bold border border-amber-200">
+            Calificar
+          </span>
+        </button>
+
+        <button (click)="cambiarTab('bitacoras')"
+                class="whitespace-nowrap py-3 px-3.5 border-b-2 font-bold text-xs sm:text-sm flex items-center gap-2 transition-all cursor-pointer"
+                [ngClass]="tabActiva === 'bitacoras' ? 'border-accent text-accent' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'">
+          <i class="fa-solid fa-book-bookmark"></i>
+          Mis Bitácoras
+        </button>
+
+      </nav>
+
+    </div>
+  </header>
+
+  <!-- NOTIFICACIONES DE FEEDBACK -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+    <div *ngIf="successMessage" class="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-semibold flex items-center gap-2 animate-fadeIn">
+      <i class="fa-solid fa-circle-check text-emerald-600 text-sm"></i>
+      <span>{{ successMessage }}</span>
+    </div>
+    <div *ngIf="errorMessage" class="p-3 bg-red-50 border border-red-200 text-red-800 rounded-xl text-xs font-semibold flex items-center gap-2 animate-fadeIn">
+      <i class="fa-solid fa-circle-exclamation text-red-600 text-sm"></i>
+      <span>{{ errorMessage }}</span>
+    </div>
+  </div>
+
+  <!-- CONTENIDO PRINCIPAL SEGÚN PESTAÑA -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+
+    <!-- ========================================== -->
+    <!-- PESTAÑA 1: MI CÁTEDRA Y DOCENTE TITULAR    -->
+    <!-- ========================================== -->
+    <div *ngIf="tabActiva === 'catedra'" class="space-y-6">
+      
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Detalles del curso -->
+        <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-6 shadow-2xs space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-book-open text-accent"></i>
+              Información de la Cátedra Asignada
+            </h3>
+            <span class="px-2.5 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded-lg">
+              {{ materiaSeleccionada?.creditos || 4 }} Créditos Académicos
+            </span>
+          </div>
+
+          <p class="text-sm text-slate-600 leading-relaxed">
+            {{ materiaSeleccionada?.descripcion }}
+          </p>
+
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-2 border-t border-slate-100">
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+              <span class="text-[11px] font-semibold text-slate-400 block uppercase">Código de Asignatura</span>
+              <span class="text-sm font-bold text-slate-800">{{ materiaSeleccionada?.codigo }}</span>
+            </div>
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+              <span class="text-[11px] font-semibold text-slate-400 block uppercase">Semestre y Paralelo</span>
+              <span class="text-sm font-bold text-slate-800">{{ materiaSeleccionada?.semestre }} - {{ materiaSeleccionada?.grupo }}</span>
+            </div>
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+              <span class="text-[11px] font-semibold text-slate-400 block uppercase">Semana Lectiva</span>
+              <span class="text-sm font-bold text-slate-800">Semana {{ materiaSeleccionada?.semana }} de {{ materiaSeleccionada?.totalSemanas }}</span>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-4 border-t border-slate-100">
+            <div class="flex items-center gap-2 text-xs text-slate-500 font-medium">
+              <i class="fa-solid fa-circle-info text-slate-400"></i>
+              Tienes privilegios de Ayudante de Cátedra para registrar asistencias y calificar actividades.
+            </div>
+            <button (click)="cambiarTab('asistencia')"
+                    class="px-4 py-2 bg-accent hover:bg-accent-hover text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-2 cursor-pointer">
+              <i class="fa-solid fa-clipboard-user"></i>
+              Tomar Asistencia Hoy
+            </button>
+          </div>
+        </div>
+
+        <!-- Tarjeta del Docente Titular Responsable -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-2xs space-y-4">
+          <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+            <i class="fa-solid fa-user-tie text-accent"></i>
+            Docente Titular
+          </h3>
+
+          <div class="flex items-center gap-3.5 p-3.5 bg-slate-50/80 rounded-2xl border border-slate-100">
+            <div class="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-black text-lg shadow-sm">
+              {{ materiaSeleccionada?.docente?.substring(0, 2)?.toUpperCase() || 'DC' }}
+            </div>
+            <div>
+              <h4 class="text-sm font-bold text-slate-900">{{ materiaSeleccionada?.docente }}</h4>
+              <p class="text-xs text-slate-500">Docente Principal a Cargo</p>
+              <span class="inline-block px-2 py-0.5 mt-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold rounded-full">
+                Tutor de Ayudantía
+              </span>
+            </div>
+          </div>
+
+          <div class="space-y-2.5 text-xs text-slate-600">
+            <div class="flex items-center justify-between py-1.5 border-b border-slate-100">
+              <span class="text-slate-400 font-medium">Correo Institucional:</span>
+              <a href="mailto:docente.titular@uteq.edu.ec" class="text-accent font-semibold hover:underline">docente.titular@uteq.edu.ec</a>
+            </div>
+            <div class="flex items-center justify-between py-1.5 border-b border-slate-100">
+              <span class="text-slate-400 font-medium">Atención a Ayudantes:</span>
+              <span class="font-bold text-slate-700">Miércoles 10:00 - 12:00</span>
+            </div>
+            <div class="flex items-center justify-between py-1.5 border-b border-slate-100">
+              <span class="text-slate-400 font-medium">Cubículo:</span>
+              <span class="font-bold text-slate-700">Edificio Docente #3, Of. 210</span>
+            </div>
+          </div>
+
+          <div class="pt-2">
+            <a href="https://meet.google.com/uteq-tutor-ayudante" target="_blank"
+               class="w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2">
+              <i class="fa-solid fa-video text-slate-500"></i>
+              Sala Virtual de Coordinación
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Nómina de Estudiantes Matriculados (Cohorte de 20+ alumnos) -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-2xs space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-users-rectangle text-accent"></i>
+              Nómina Oficial de Estudiantes Matriculados
+            </h3>
+            <p class="text-xs text-slate-500 mt-0.5">
+              Alumnos registrados bajo tu seguimiento académico en {{ materiaSeleccionada?.nombre }}.
+            </p>
+          </div>
+          
+          <span class="px-3 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl self-start sm:self-auto">
+            Total: {{ materiaSeleccionada?.estudiantes?.length || 24 }} Estudiantes
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 pt-2">
+          <div *ngFor="let est of materiaSeleccionada?.estudiantes" 
+               class="p-3 bg-slate-50/70 border border-slate-200/80 rounded-xl hover:border-slate-300 hover:bg-slate-50 transition-all flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">
+              {{ est.nombre.substring(0, 2).toUpperCase() }}
+            </div>
+            <div class="min-w-0">
+              <p class="text-xs font-bold text-slate-800 truncate">{{ est.nombre }}</p>
+              <p class="text-[11px] text-slate-400 truncate">{{ est.correo }}</p>
+              <div class="flex items-center gap-2 mt-1">
+                <span class="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
+                  Asistencia: {{ est.asistencia || 94 }}%
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- PESTAÑA 2: MI HORARIO DE CLASES            -->
+    <!-- ========================================== -->
+    <div *ngIf="tabActiva === 'horario'" class="space-y-6">
+      
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-2xs space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-clock text-accent"></i>
+              Mi Horario Asignado de Ayudantía
+            </h3>
+            <p class="text-xs text-slate-500 mt-0.5">
+              Horarios semanales oficiales en los que estás a cargo de impartir talleres, prácticas o tutorías de apoyo.
+            </p>
+          </div>
+          
+          <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold">
+            <i class="fa-solid fa-triangle-exclamation text-amber-600"></i>
+            4 Horas Semanales Asignadas
+          </div>
+        </div>
+
+        <!-- Tarjetas de Sesiones Programadas -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+          <div *ngFor="let h of horariosAyudantia" class="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 transition-all space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-accent/10 text-accent">
+                {{ h.dia }}
+              </span>
+              <span class="text-xs font-black text-slate-800 bg-white px-2.5 py-1 rounded-lg border border-slate-200">
+                {{ h.horaInicio }} - {{ h.horaFin }}
+              </span>
+            </div>
+
+            <div>
+              <h4 class="text-sm font-bold text-slate-900">{{ h.temaPrevisto }}</h4>
+              <p class="text-xs text-slate-500 mt-0.5">{{ h.tipo }}</p>
+            </div>
+
+            <div class="p-3 bg-white rounded-xl border border-slate-200/80 text-xs space-y-1.5">
+              <div class="flex items-center gap-2 text-slate-600">
+                <i class="fa-solid fa-location-dot text-slate-400"></i>
+                <span class="font-medium">{{ h.aula }}</span>
+              </div>
+              <div *ngIf="h.enlaceVirtual" class="flex items-center gap-2 text-accent">
+                <i class="fa-solid fa-link"></i>
+                <a [href]="h.enlaceVirtual" target="_blank" class="font-semibold hover:underline truncate">{{ h.enlaceVirtual }}</a>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-end pt-1">
+              <button (click)="cambiarTab('asistencia')"
+                      class="text-xs font-bold text-accent hover:text-accent-hover flex items-center gap-1 cursor-pointer">
+                Ver asistencia de este horario <i class="fa-solid fa-arrow-right"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- PESTAÑA 3: SÍLABO Y DIRECTRICES DOCENTE   -->
+    <!-- ========================================== -->
+    <div *ngIf="tabActiva === 'silabo'" class="space-y-6">
+      
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-2xs space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-clipboard-list text-accent"></i>
+              Sílabo y Directrices Pedagógicas del Docente Titular
+            </h3>
+            <p class="text-xs text-slate-500 mt-0.5">
+              Planificación temática establecida por {{ materiaSeleccionada?.docente }}. Marca los temas conforme los impartas en clase.
+            </p>
+          </div>
+          
+          <div class="text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-xl">
+            Semana del Semestre: <span class="text-accent">{{ materiaSeleccionada?.semana || 8 }} / 16</span>
+          </div>
+        </div>
+
+        <!-- Lista de Semanas y Directrices -->
+        <div class="space-y-3 pt-2">
+          <div *ngFor="let item of silaboDirectrices" 
+               class="p-4 rounded-2xl border transition-all"
+               [ngClass]="item.completada ? 'bg-emerald-50/40 border-emerald-200' : 'bg-white border-slate-200 hover:border-slate-300'">
+            
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100">
+              <div class="flex items-center gap-2.5">
+                <span class="px-2.5 py-1 rounded-lg text-xs font-black uppercase"
+                      [ngClass]="item.completada ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700'">
+                  Semana {{ item.semana }}
+                </span>
+                <h4 class="text-sm font-bold text-slate-900">{{ item.tema }}</h4>
+              </div>
+
+              <div class="flex items-center gap-3">
+                <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full border"
+                      [ngClass]="item.completada ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-amber-50 text-amber-800 border-amber-200'">
+                  <i class="fa-solid" [ngClass]="item.completada ? 'fa-check' : 'fa-clock'"></i>
+                  {{ item.completada ? 'Impartido en Clase' : 'Pendiente por Impartir' }}
+                </span>
+
+                <!-- Botón de acción para el ayudante -->
+                <button (click)="toggleSilaboImpartido(item.id)"
+                        class="px-3 py-1 text-xs font-bold rounded-xl border transition-all cursor-pointer shadow-2xs"
+                        [ngClass]="item.completada ? 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100' : 'bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700'">
+                  <i class="fa-solid" [ngClass]="item.completada ? 'fa-rotate-left' : 'fa-check'"></i>
+                  {{ item.completada ? 'Desmarcar' : 'Marcar Impartido' }}
+                </button>
+              </div>
+            </div>
+
+            <div class="pt-3 space-y-2">
+              <p class="text-xs text-slate-600 leading-relaxed">
+                <strong>Descripción del Contenido:</strong> {{ item.descripcion }}
+              </p>
+              
+              <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/80 text-xs">
+                <span class="font-bold text-slate-800 block mb-1">
+                  <i class="fa-solid fa-bullhorn text-accent mr-1"></i>
+                  Directrices Específicas del Docente Titular:
+                </span>
+                <p class="text-slate-600 italic">"{{ item.directrices }}"</p>
+              </div>
+
+              <div *ngIf="item.recursosSugeridos" class="flex items-center gap-2 text-xs text-slate-500 pt-1">
+                <i class="fa-solid fa-paperclip text-slate-400"></i>
+                <span>Recurso recomendado: <strong class="text-slate-700">{{ item.recursosSugeridos }}</strong></span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- PESTAÑA 4: CONTROL DE ASISTENCIA (20+ ESTUDIANTES)       -->
+    <!-- ======================================================== -->
+    <div *ngIf="tabActiva === 'asistencia'" class="space-y-6">
+      
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-2xs space-y-5">
+        
+        <!-- Cabecera de Asistencia y Selector de Sesión -->
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+          <div>
+            <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-clipboard-user text-accent"></i>
+              Control de Asistencia del Estudiantado
+            </h3>
+            <p class="text-xs text-slate-500 mt-0.5">
+              Interfaz optimizada para el registro rápido de grupos de 20 o más estudiantes.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2.5">
+            <!-- Selector de fecha/sesión -->
+            <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5">
+              <span class="text-xs font-bold text-slate-500">Sesión:</span>
+              <select [(ngModel)]="sesionAsistenciaSeleccionadaId" 
+                      class="text-xs font-bold text-slate-800 bg-transparent outline-none cursor-pointer">
+                <option *ngFor="let s of registrosAsistencia" [value]="s.id">
+                  {{ s.fecha }} - {{ s.tema }}
+                </option>
+              </select>
+            </div>
+
+            <button (click)="modalNuevaSesionAsistencia = true"
+                    class="px-3 py-1.5 bg-accent hover:bg-accent-hover text-white text-xs font-bold rounded-xl shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer">
+              <i class="fa-solid fa-plus"></i>
+              Nueva Fecha
+            </button>
+          </div>
+        </div>
+
+        <div *ngIf="sesionAsistenciaActual" class="space-y-4">
+          
+          <!-- Barra de Métricas y Resumen de la Sesión -->
+          <div class="p-4 bg-slate-50/80 rounded-2xl border border-slate-200/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded-md bg-accent/10 text-accent font-bold text-xs">Tema de la Clase</span>
+                <span class="text-xs text-slate-400 font-medium">{{ formatearFecha(sesionAsistenciaActual.fecha) }}</span>
+              </div>
+              <h4 class="text-sm sm:text-base font-black text-slate-900 mt-1">{{ sesionAsistenciaActual.tema }}</h4>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <div class="text-right">
+                <span class="text-xs font-bold text-slate-400 block">Presentes</span>
+                <span class="text-sm sm:text-base font-black text-emerald-700">
+                  {{ contarPresentes(sesionAsistenciaActual.asistentes) }} / {{ sesionAsistenciaActual.asistentes.length }}
+                </span>
+              </div>
+              <div class="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 flex flex-col items-center justify-center">
+                <span class="text-xs font-black">
+                  {{ Math.round((contarPresentes(sesionAsistenciaActual.asistentes) / (sesionAsistenciaActual.asistentes.length || 1)) * 100) }}%
+                </span>
+                <span class="text-[9px] font-semibold text-emerald-600">Ratio</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Barra de Herramientas: Buscador, Filtros y Acciones en Lote -->
+          <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 pt-1">
+            
+            <!-- Buscador en tiempo real -->
+            <div class="relative flex-1 max-w-sm">
+              <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+              <input type="text"
+                     [(ngModel)]="busquedaEstudianteAsistencia"
+                     placeholder="Buscar alumno por nombre o correo..."
+                     class="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-accent/20 transition-all" />
+            </div>
+
+            <!-- Filtros de Asistencia -->
+            <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs shrink-0">
+              <button (click)="filtroEstadoAsistencia = 'todos'"
+                      class="px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer"
+                      [ngClass]="filtroEstadoAsistencia === 'todos' ? 'bg-white text-slate-900 shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-800'">
+                Todos ({{ sesionAsistenciaActual.asistentes.length }})
+              </button>
+              <button (click)="filtroEstadoAsistencia = 'presentes'"
+                      class="px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer"
+                      [ngClass]="filtroEstadoAsistencia === 'presentes' ? 'bg-white text-emerald-700 shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-800'">
+                Presentes ({{ contarPresentes(sesionAsistenciaActual.asistentes) }})
+              </button>
+              <button (click)="filtroEstadoAsistencia = 'ausentes'"
+                      class="px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer"
+                      [ngClass]="filtroEstadoAsistencia === 'ausentes' ? 'bg-white text-rose-700 shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-800'">
+                Ausentes ({{ sesionAsistenciaActual.asistentes.length - contarPresentes(sesionAsistenciaActual.asistentes) }})
+              </button>
+            </div>
+
+            <!-- Acciones en Lote -->
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button (click)="marcarTodosAsistencia(true)"
+                      class="px-2.5 py-1.5 text-xs font-semibold bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition-colors flex items-center gap-1 cursor-pointer">
+                <i class="fa-solid fa-check-double text-emerald-600"></i> Todos Presentes
+              </button>
+              <button (click)="marcarTodosAsistencia(false)"
+                      class="px-2.5 py-1.5 text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-rose-50 hover:text-rose-700 border border-slate-200 rounded-xl transition-colors flex items-center gap-1 cursor-pointer">
+                <i class="fa-solid fa-xmark"></i> Todos Ausentes
+              </button>
+              <button (click)="invertirAsistencia()"
+                      title="Invertir estados de asistencia"
+                      class="px-2 py-1.5 text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200 rounded-xl transition-colors cursor-pointer">
+                <i class="fa-solid fa-arrow-right-arrow-left"></i>
+              </button>
+            </div>
+
+          </div>
+
+          <!-- Cuadrícula Optimizada para 20+ Estudiantes (2 Columnas) -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-2">
+            <div *ngFor="let est of getEstudiantesFiltradosAsistencia(); let ei = index"
+                 (click)="toggleAsistenciaEstudiante(ei)"
+                 class="flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer select-none"
+                 [ngClass]="{
+                   'bg-emerald-50/40 border-emerald-200 hover:bg-emerald-50/70': est.presente,
+                   'bg-white border-slate-200 hover:bg-slate-50': !est.presente
+                 }">
+              
+              <div class="flex items-center gap-3 min-w-0">
+                <div class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 transition-colors"
+                     [ngClass]="est.presente ? 'bg-emerald-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-600 border border-slate-200'">
+                  {{ est.nombre.substring(0, 2).toUpperCase() }}
+                </div>
+                <div class="min-w-0">
+                  <p class="text-xs font-bold text-slate-900 truncate">{{ est.nombre }}</p>
+                  <p class="text-[11px] text-slate-400 truncate">{{ est.email }}</p>
+                </div>
+              </div>
+
+              <!-- Botón Toggle de Asistencia -->
+              <button type="button"
+                      class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all border shrink-0 flex items-center gap-1.5 shadow-2xs"
+                      [ngClass]="est.presente ? 'bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700' : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'">
+                <i class="fa-solid" [ngClass]="est.presente ? 'fa-check' : 'fa-xmark text-slate-400'"></i>
+                <span>{{ est.presente ? 'Presente' : 'Ausente' }}</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- PESTAÑA 5: RECURSOS Y ACTIVIDADES (CON CALIFICAR)       -->
+    <!-- ======================================================== -->
+    <div *ngIf="tabActiva === 'recursos'" class="space-y-6">
+      
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-2xs space-y-4">
+        
+        <!-- Header de Recursos y Actividades con subpestañas -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+          <div>
+            <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-folder-tree text-accent"></i>
+              Gestión Pedagógica y Evaluación
+            </h3>
+            <p class="text-xs text-slate-500 mt-0.5">
+              Sube materiales de apoyo formativo y califica actividades y talleres de los alumnos.
+            </p>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <!-- Subpestañas -->
+            <div class="bg-slate-100 p-1 rounded-xl flex items-center gap-1 text-xs">
+              <button (click)="subTabRecursos = 'actividades'"
+                      class="px-3 py-1 rounded-lg font-bold transition-all cursor-pointer"
+                      [ngClass]="subTabRecursos === 'actividades' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'">
+                Actividades & Calificación ({{ actividadesMateria.length }})
+              </button>
+              <button (click)="subTabRecursos = 'recursos'"
+                      class="px-3 py-1 rounded-lg font-bold transition-all cursor-pointer"
+                      [ngClass]="subTabRecursos === 'recursos' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'">
+                Recursos Compartidos ({{ recursosMateria.length }})
+              </button>
+            </div>
+
+            <button *ngIf="subTabRecursos === 'actividades'" (click)="modalNuevaActividad = true"
+                    class="px-3 py-1.5 bg-accent hover:bg-accent-hover text-white text-xs font-bold rounded-xl shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer">
+              <i class="fa-solid fa-plus"></i> Nueva Actividad
+            </button>
+            <button *ngIf="subTabRecursos === 'recursos'" (click)="modalNuevoRecurso = true"
+                    class="px-3 py-1.5 bg-accent hover:bg-accent-hover text-white text-xs font-bold rounded-xl shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer">
+              <i class="fa-solid fa-cloud-arrow-up"></i> Subir Recurso
+            </button>
+          </div>
+        </div>
+
+        <!-- SUB-PESTAÑA ACTIVIDADES: CON BOTÓN "CALIFICAR" DIRECTO -->
+        <div *ngIf="subTabRecursos === 'actividades'" class="space-y-3">
+          
+          <div *ngFor="let act of actividadesMateria" 
+               class="p-4 rounded-2xl border border-slate-200 bg-white hover:border-slate-300 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            
+            <div class="space-y-1">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase"
+                      [ngClass]="{
+                        'bg-blue-50 text-blue-700': act.tipo === 'Taller',
+                        'bg-purple-50 text-purple-700': act.tipo === 'Quiz',
+                        'bg-amber-50 text-amber-700': act.tipo === 'Proyecto' || act.tipo === 'Tarea'
+                      }">
+                  {{ act.tipo }}
+                </span>
+                <span class="text-xs text-slate-400">
+                  <i class="fa-solid fa-calendar-check mr-1"></i> Entrega: {{ formatearFecha(act.fechaEntrega) }}
+                </span>
+              </div>
+
+              <h4 class="text-sm font-bold text-slate-900">{{ act.titulo }}</h4>
+              <p class="text-xs text-slate-500 leading-relaxed max-w-2xl">{{ act.descripcion }}</p>
+            </div>
+
+            <!-- Botones de Acción: ¡CALIFICAR DIRECTO Y DESCARGAR! -->
+            <div class="flex items-center gap-2 self-end sm:self-center shrink-0">
+              <div class="text-right mr-2 hidden sm:block">
+                <span class="text-[10px] text-slate-400 font-medium block">Entregas</span>
+                <span class="text-xs font-bold text-slate-700">24 / 24 Recibidas</span>
+              </div>
+
+              <!-- BOTÓN DESCARGAR GUÍA -->
+              <button (click)="descargarActividadDocumento(act)"
+                      title="Descargar guía de la actividad"
+                      class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer">
+                <i class="fa-solid fa-download text-emerald-600"></i>
+                <span class="hidden sm:inline">Guía</span>
+              </button>
+
+              <!-- BOTÓN DE CALIFICAR PRINCIPAL -->
+              <button (click)="calificarActividad(act.id)"
+                      class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all flex items-center gap-2 cursor-pointer">
+                <i class="fa-solid fa-clipboard-check"></i>
+                Calificar Entregas
+              </button>
+            </div>
+
+          </div>
+
+          <div *ngIf="actividadesMateria.length === 0" class="text-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+            <i class="fa-solid fa-tasks text-3xl text-slate-300 mb-2"></i>
+            <p class="text-xs font-semibold text-slate-600">No hay actividades creadas en este curso.</p>
+            <button (click)="modalNuevaActividad = true" class="mt-2 text-xs font-bold text-accent hover:underline">
+              Crear primera actividad
+            </button>
+          </div>
+
+        </div>
+
+        <!-- SUB-PESTAÑA RECURSOS COMPARTIDOS -->
+        <div *ngIf="subTabRecursos === 'recursos'" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          
+          <div *ngFor="let rec of recursosMateria" class="p-3.5 bg-slate-50/70 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center font-bold text-base shrink-0">
+                <i class="fa-solid" [ngClass]="{
+                  'fa-file-pdf': rec.tipo === 'PDF',
+                  'fa-video': rec.tipo === 'Video',
+                  'fa-link': rec.tipo === 'Enlace',
+                  'fa-file': rec.tipo !== 'PDF' && rec.tipo !== 'Video' && rec.tipo !== 'Enlace'
+                }"></i>
+              </div>
+              <div class="min-w-0">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <h5 class="text-xs font-bold text-slate-900 truncate">{{ rec.titulo }}</h5>
+                  <span *ngIf="rec.nombreArchivo" class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1">
+                    <i class="fa-solid fa-paperclip"></i> Adjunto
+                  </span>
+                </div>
+                <p class="text-[11px] text-slate-400 truncate">{{ rec.descripcion || rec.url }}</p>
+                <span class="text-[10px] font-semibold text-slate-500">Subido por: {{ rec.creadoPor || 'Ayudante' }}</span>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 shrink-0">
+              <button (click)="descargarRecursoDocumento(rec)"
+                      class="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1 shadow-2xs"
+                      title="Descargar documento">
+                <i class="fa-solid fa-download text-[10px]"></i> Descargar
+              </button>
+              <a [href]="rec.url" target="_blank"
+                 class="px-2.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1 shadow-2xs">
+                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> Ver
+              </a>
+            </div>
+          </div>
+
+          <div *ngIf="recursosMateria.length === 0" class="col-span-full text-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+            <i class="fa-solid fa-folder-open text-3xl text-slate-300 mb-2"></i>
+            <p class="text-xs font-semibold text-slate-600">No hay recursos didácticos compartidos todavía.</p>
+            <button (click)="modalNuevoRecurso = true" class="mt-2 text-xs font-bold text-accent hover:underline">
+              Compartir primer recurso
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- PESTAÑA 6: MIS BITÁCORAS E INFORMES                      -->
+    <!-- ======================================================== -->
+    <div *ngIf="tabActiva === 'bitacoras'" class="space-y-6">
+      
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-2xs space-y-4">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+          <div>
+            <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-book-bookmark text-accent"></i>
+              Mis Bitácoras Mensuales e Informes de Ayudantía
+            </h3>
+            <p class="text-xs text-slate-500 mt-0.5">
+              Registro formal de horas, evidencias pedagógicas y actividades para aprobación del docente titular y coordinación.
+            </p>
+          </div>
+
+          <button (click)="modalNuevaBitacora = true"
+                  class="px-4 py-2 bg-accent hover:bg-accent-hover text-white text-xs font-bold rounded-xl shadow-2xs transition-all flex items-center gap-2 cursor-pointer">
+            <i class="fa-solid fa-plus"></i>
+            Registrar Bitácora Mensual
+          </button>
+        </div>
+
+        <!-- Historial de Bitácoras -->
+        <div class="space-y-3">
+          <div *ngFor="let b of bitacoras" class="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 transition-all space-y-2">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                  Aprobada por Docente
+                </span>
+                <span class="text-xs text-slate-400 font-medium">{{ formatearFecha(b.fecha) }}</span>
+              </div>
+
+              <a [href]="b.evidenciaUrl" target="_blank"
+                 class="text-xs font-bold text-accent hover:underline flex items-center gap-1">
+                <i class="fa-solid fa-file-pdf"></i> Evidencia Adjunta
+              </a>
+            </div>
+
+            <p class="text-xs text-slate-700 leading-relaxed">
+              {{ b.actividadesRealizadas }}
+            </p>
+
+            <div class="flex items-center gap-4 text-[11px] text-slate-500 pt-1 border-t border-slate-200/60">
+              <span>Cátedra: <strong class="text-slate-700">{{ b.nombreCatedra || materiaSeleccionada?.nombre }}</strong></span>
+              <span>Ayudante: <strong class="text-slate-700">{{ b.nombreAyudante || 'Alejandro García' }}</strong></span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ========================================== -->
+  <!-- MODAL: NUEVA SESIÓN DE ASISTENCIA         -->
+  <!-- ========================================== -->
+  <div *ngIf="modalNuevaSesionAsistencia" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 max-w-md w-full shadow-xl space-y-4">
+      <div class="flex items-center justify-between">
+        <h4 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-calendar-plus text-accent"></i>
+          Nueva Sesión de Asistencia
+        </h4>
+        <button (click)="modalNuevaSesionAsistencia = false" class="text-slate-400 hover:text-slate-600">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Fecha de la Sesión</label>
+          <input type="date" [(ngModel)]="nuevaSesion.fecha"
+                 class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-accent/20" />
+        </div>
+
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Tema / Práctica Impartida</label>
+          <input type="text" [(ngModel)]="nuevaSesion.tema" placeholder="Ej: Taller 3: Multiplicadores de Lagrange"
+                 class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-accent/20" />
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2">
+        <button (click)="modalNuevaSesionAsistencia = false"
+                class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold">
+          Cancelar
+        </button>
+        <button (click)="crearNuevaSesionAsistencia()"
+                class="px-4 py-2 bg-accent hover:bg-accent-hover text-white rounded-xl text-xs font-bold">
+          Crear y Cargar Nómina
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: NUEVA ACTIVIDAD EVALUATIVA          -->
+  <!-- ========================================== -->
+  <div *ngIf="modalNuevaActividad" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 max-w-md w-full shadow-xl space-y-4">
+      <div class="flex items-center justify-between">
+        <h4 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-tasks text-accent"></i>
+          Nueva Actividad Evaluativa
+        </h4>
+        <button (click)="modalNuevaActividad = false" class="text-slate-400 hover:text-slate-600">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Título de la Actividad</label>
+          <input type="text" [(ngModel)]="nuevaActividad.titulo" placeholder="Ej: Taller Práctico de Integrales"
+                 class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-accent/20" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="font-bold text-slate-700 block mb-1">Tipo</label>
+            <select [(ngModel)]="nuevaActividad.tipo"
+                    class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none">
+              <option value="Taller">Taller</option>
+              <option value="Quiz">Quiz</option>
+              <option value="Tarea">Tarea</option>
+              <option value="Proyecto">Proyecto</option>
+            </select>
+          </div>
+          <div>
+            <label class="font-bold text-slate-700 block mb-1">Fecha de Entrega</label>
+            <input type="date" [(ngModel)]="nuevaActividad.fechaEntrega"
+                   class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none" />
+          </div>
+        </div>
+
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Instrucciones</label>
+          <textarea [(ngModel)]="nuevaActividad.descripcion" rows="2" placeholder="Instrucciones para los estudiantes..."
+                    class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-accent/20"></textarea>
+        </div>
+
+        <!-- Archivo adjunto para la actividad -->
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Adjuntar Guía / Rúbrica en PDF o Documento (Opcional)</label>
+          <div class="flex items-center gap-2">
+            <label class="cursor-pointer px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-xs font-semibold text-slate-700 flex items-center gap-1.5 transition-colors">
+              <i class="fa-solid fa-file-arrow-up text-accent"></i>
+              <span>{{ archivoActividad ? 'Cambiar archivo' : 'Examinar archivo...' }}</span>
+              <input type="file" (change)="onArchivoActividadChange($event)" class="hidden" accept=".pdf,.doc,.docx,.zip,.rar,.png,.jpg" />
+            </label>
+            <div *ngIf="archivoActividad" class="flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-1.5 rounded-xl text-[11px]">
+              <i class="fa-solid fa-paperclip"></i>
+              <span class="truncate max-w-[160px]">{{ archivoActividad.nombre }}</span>
+              <button (click)="quitarArchivoActividad()" class="text-rose-500 hover:text-rose-700 ml-1">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2">
+        <button (click)="modalNuevaActividad = false" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold">
+          Cancelar
+        </button>
+        <button (click)="guardarActividad()" class="px-4 py-2 bg-accent hover:bg-accent-hover text-white rounded-xl text-xs font-bold flex items-center gap-1.5">
+          <i class="fa-solid fa-plus"></i> Publicar Actividad
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: NUEVO RECURSO DIDÁCTICO             -->
+  <!-- ========================================== -->
+  <div *ngIf="modalNuevoRecurso" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 max-w-md w-full shadow-xl space-y-4">
+      <div class="flex items-center justify-between">
+        <h4 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-cloud-arrow-up text-accent"></i>
+          Subir Recurso de Apoyo
+        </h4>
+        <button (click)="modalNuevoRecurso = false" class="text-slate-400 hover:text-slate-600">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Título del Material</label>
+          <input type="text" [(ngModel)]="nuevoRecurso.titulo" placeholder="Ej: Guía de Ejercicios Resueltos - Derivadas"
+                 class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-accent/20" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="font-bold text-slate-700 block mb-1">Tipo de Formato</label>
+            <select [(ngModel)]="nuevoRecurso.tipo" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none">
+              <option value="PDF">Documento PDF</option>
+              <option value="Video">Video Explicativo</option>
+              <option value="Enlace">Enlace / Simulador</option>
+            </select>
+          </div>
+          <div>
+            <label class="font-bold text-slate-700 block mb-1">URL del Recurso (Opcional)</label>
+            <input type="text" [(ngModel)]="nuevoRecurso.url" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none" />
+          </div>
+        </div>
+
+        <!-- Carga de Archivo Real por el Ayudante -->
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Subir Archivo Local (PDF, DOCX, Diapositivas, ZIP)</label>
+          <div class="flex items-center gap-2">
+            <label class="cursor-pointer px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-xs font-semibold text-slate-700 flex items-center gap-1.5 transition-colors">
+              <i class="fa-solid fa-cloud-arrow-up text-accent"></i>
+              <span>{{ archivoRecurso ? 'Cambiar archivo' : 'Seleccionar archivo...' }}</span>
+              <input type="file" (change)="onArchivoRecursoChange($event)" class="hidden" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.rar,.png,.jpg" />
+            </label>
+            <div *ngIf="archivoRecurso" class="flex items-center gap-1.5 bg-indigo-50 text-indigo-800 border border-indigo-200 px-2.5 py-1.5 rounded-xl text-[11px]">
+              <i class="fa-solid fa-paperclip"></i>
+              <span class="truncate max-w-[160px]">{{ archivoRecurso.nombre }}</span>
+              <button (click)="quitarArchivoRecurso()" class="text-rose-500 hover:text-rose-700 ml-1">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Breve Descripción</label>
+          <textarea [(ngModel)]="nuevoRecurso.descripcion" rows="2" placeholder="Describe brevemente este contenido..."
+                    class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none"></textarea>
+        </div>
+
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Enlaces relacionados (una por línea o separadas por comas)</label>
+          <textarea [(ngModel)]="nuevoRecurso.linksString" rows="2" placeholder="https://youtu.be/..., https://ejemplo.edu/recurso"
+                    class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none text-xs"></textarea>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2">
+        <button (click)="modalNuevoRecurso = false" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold">
+          Cancelar
+        </button>
+        <button (click)="guardarRecurso()" class="px-4 py-2 bg-accent hover:bg-accent-hover text-white rounded-xl text-xs font-bold flex items-center gap-1.5">
+          <i class="fa-solid fa-cloud-arrow-up"></i> Guardar y Compartir
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: REGISTRAR BITÁCORA MENSUAL         -->
+  <!-- ========================================== -->
+  <div *ngIf="modalNuevaBitacora" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 max-w-md w-full shadow-xl space-y-4">
+      <div class="flex items-center justify-between">
+        <h4 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-book-bookmark text-accent"></i>
+          Registrar Bitácora Mensual de Ayudantía
+        </h4>
+        <button (click)="modalNuevaBitacora = false" class="text-slate-400 hover:text-slate-600">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Actividades Realizadas</label>
+          <textarea [(ngModel)]="nuevaBitacora.actividadesRealizadas" rows="4" 
+                    placeholder="Describe las clases dictadas, resolución de dudas a los estudiantes, talleres impartidos..."
+                    class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-accent/20"></textarea>
+        </div>
+
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Enlace al Documento de Evidencia / Firma</label>
+          <input type="text" [(ngModel)]="nuevaBitacora.evidenciaUrl"
+                 class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none" />
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2">
+        <button (click)="modalNuevaBitacora = false" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold">
+          Cancelar
+        </button>
+        <button (click)="guardarBitacora()" class="px-4 py-2 bg-accent hover:bg-accent-hover text-white rounded-xl text-xs font-bold">
+          Enviar al Docente
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>

@@ -1,0 +1,33 @@
+<div class="space-y-6">
+  <div>
+    <h2 class="text-2xl font-bold text-slate-900">Seguimiento de Ayudantías</h2>
+    <p class="text-slate-500 text-sm mt-1">Supervisa el estado de las ayudantías activas.</p>
+  </div>
+
+  <section class="glass-card rounded-2xl overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+        <tr class="text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-200 bg-slate-50/50">
+          <th class="text-left font-semibold px-5 md:px-6 py-3">Ayudante</th>
+          <th class="text-left font-semibold px-4 py-3">Cátedra</th>
+          <th class="text-center font-semibold px-4 py-3">Estado</th>
+          <th class="text-right font-semibold px-5 md:px-6 py-3">Acciones</th>
+        </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200">
+        <tr *ngFor="let a of ayudantias" class="hover:bg-slate-50 transition-colors">
+          <td class="px-5 md:px-6 py-4 font-medium text-slate-900">{{ a.nombreEstudiante }}</td>
+          <td class="px-4 py-4 text-slate-500">{{ a.nombreCatedra }}</td>
+          <td class="px-4 py-4 text-center">
+            <span class="px-2.5 py-1 rounded-full bg-emerald-50 text-xs font-medium text-emerald-600 border border-emerald-100">Activa</span>
+          </td>
+          <td class="px-5 md:px-6 py-4 text-right">
+            <button class="text-xs text-accent hover:underline">Ver Detalle</button>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

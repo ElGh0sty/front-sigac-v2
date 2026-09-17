@@ -1,0 +1,246 @@
+<div class="space-y-6 max-w-7xl mx-auto pb-12">
+  <!-- ENCABEZADO -->
+  <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-2 text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-1">
+        <i class="fa-solid fa-gavel"></i> Panel de Evaluadores y Tribunal Docente
+      </div>
+      <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Validación y Calificación de Ayudantías</h1>
+      <p class="text-sm text-slate-500 mt-1">
+        Gestión de defensas pedagógicas convocadas, evaluación por rúbrica institucional y asentamiento de notas del tribunal.
+      </p>
+    </div>
+
+    <button (click)="cargarPresentaciones()"
+            class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs transition-colors inline-flex items-center gap-2 self-start md:self-auto cursor-pointer">
+      <i class="fa-solid fa-arrows-rotate text-slate-500" [class.fa-spin]="isLoading"></i>
+      <span>Actualizar Reuniones</span>
+    </button>
+  </div>
+
+  <!-- FILTROS Y BÚSQUEDA -->
+  <div class="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+    <div class="relative w-full sm:w-96">
+      <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+      <input type="text" [(ngModel)]="busqueda" placeholder="Buscar por estudiante, cátedra o tema..."
+             class="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-600 shadow-sm" />
+    </div>
+
+    <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+      <span class="text-xs text-slate-500 font-medium">Estado:</span>
+      <select [(ngModel)]="filtroEstado"
+              class="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 font-medium focus:outline-none focus:border-emerald-600 shadow-sm">
+        <option value="todos">Todos los estados</option>
+        <option value="Convocada">Convocada</option>
+        <option value="Evaluada">Evaluada</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- LISTADO DE REUNIONES DE TRIBUNAL CONVOCADAS -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+    <div *ngFor="let pres of presentacionesFiltradas"
+         class="bg-white border border-slate-200 hover:border-emerald-600/50 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4">
+      <div>
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-600 mb-1.5">
+              <i class="fa-solid fa-calendar-day text-emerald-600"></i> {{ pres.fecha }}
+            </span>
+            <h3 class="text-base font-bold text-slate-900 leading-snug">{{ pres.estudianteNombre }}</h3>
+            <p class="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
+              <i class="fa-solid fa-book-open text-emerald-600"></i>
+              <span class="font-semibold text-slate-700">{{ pres.catedraNombre }}</span>
+            </p>
+          </div>
+
+          <!-- Badge de Estado (Convocada o Evaluada) -->
+          <span [ngClass]="{
+                  'bg-amber-50 text-amber-700 border-amber-200': pres.estado === 'Convocada' || pres.estado === 'Pendiente',
+                  'bg-emerald-50 text-emerald-700 border-emerald-200': pres.estado === 'Evaluada' || pres.estado === 'Aprobada'
+                }"
+                class="px-3 py-1 rounded-full text-xs font-bold border shrink-0 inline-flex items-center gap-1">
+            <i class="fa-solid" [ngClass]="pres.estado === 'Evaluada' ? 'fa-circle-check' : 'fa-clock'"></i>
+            {{ pres.estado }}
+          </span>
+        </div>
+
+        <!-- Tema del Sílabo -->
+        <div class="mt-4 p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs">
+          <span class="font-semibold text-slate-700 block mb-1 text-[11px] uppercase tracking-wider">Tema de Sustentación:</span>
+          <p class="text-slate-800 font-medium">{{ pres.temaSilabo }}</p>
+        </div>
+
+        <!-- Fecha, hora y lugar/enlace -->
+        <div class="mt-3 space-y-2 text-xs text-slate-600">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-location-dot text-slate-400 w-4"></i>
+            <span class="font-medium text-slate-700"><strong>Lugar/Enlace:</strong> {{ pres.lugarOEnlace }}</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-users text-slate-400 w-4"></i>
+            <span><strong>Tribunal:</strong> {{ pres.profesoresAsignados.join(', ') || 'Docentes Designados' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- BOTÓN CALIFICAR SUSTENTACIÓN -->
+      <div class="pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
+        <div class="text-xs text-slate-500">
+          <span *ngIf="pres.promedioNota" class="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+            Promedio: {{ pres.promedioNota.toFixed(1) }} / 10
+          </span>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button type="button" (click)="rechazarDefensa(pres)"
+                  class="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-semibold rounded-xl text-xs transition-colors inline-flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-circle-xmark text-rose-600"></i>
+            <span>No Aprobar</span>
+          </button>
+          <button (click)="abrirModalCalificar(pres)"
+                  class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs shadow-md shadow-emerald-700/20 transition-all inline-flex items-center gap-2 cursor-pointer">
+            <i class="fa-solid fa-pen-to-square"></i>
+            <span>{{ pres.estado === 'Evaluada' ? 'Modificar Calificación' : 'Calificar Sustentación' }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIN RESULTADOS -->
+    <div *ngIf="presentacionesFiltradas.length === 0" class="col-span-2 py-16 bg-white border border-slate-200 rounded-2xl text-center text-slate-400 text-xs">
+      <i class="fa-solid fa-inbox text-4xl text-slate-300 block mb-3"></i>
+      <p class="font-semibold text-slate-600 text-sm">No se encontraron defensas ni reuniones convocadas</p>
+      <p class="text-slate-400 mt-1">Verifique la conexión con el servidor o ajuste los filtros de búsqueda.</p>
+    </div>
+  </div>
+
+  <!-- MODAL: RÚBRICA OFICIAL DE EVALUACIÓN DEL TRIBUNAL -->
+  <div *ngIf="mostrarModalCalificar && presentacionSeleccionada"
+       class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full border border-slate-100 overflow-hidden my-8">
+      <!-- Encabezado Modal -->
+      <div class="bg-slate-900 text-white p-6 flex items-center justify-between">
+        <div>
+          <span class="text-xs font-semibold text-emerald-400 uppercase tracking-wider block mb-1">Rúbrica Oficial de Evaluación</span>
+          <h2 class="text-xl font-bold">{{ presentacionSeleccionada.estudianteNombre }}</h2>
+          <p class="text-xs text-slate-300 mt-0.5">Cátedra: <strong>{{ presentacionSeleccionada.catedraNombre }}</strong></p>
+        </div>
+        <button (click)="cerrarModalCalificar()" class="text-slate-400 hover:text-white text-xl transition-colors cursor-pointer">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Formulario de Evaluación -->
+      <form [formGroup]="evaluacionForm" (ngSubmit)="guardarCalificacion()" class="p-6 space-y-6">
+
+        <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-start gap-2.5">
+          <i class="fa-solid fa-triangle-exclamation text-amber-600 mt-0.5 text-sm shrink-0"></i>
+          <div>
+            <strong>Instrucciones para el Jurado:</strong> Ingrese una calificación cuantitativa de 0 a 10 para cada criterio pedagógico. Las notas ponderadas asentarán la validez del acta oficial.
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <!-- Criterio 1: Dominio Científico -->
+          <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="text-xs font-bold text-slate-900 uppercase tracking-wider block">
+                  1. Dominio Científico / Técnico
+                </label>
+                <span class="text-[11px] text-slate-500">Conocimiento profundo del sílabo, teoría y aplicabilidad práctica (40%).</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <input type="number" min="0" max="10" step="0.1" formControlName="dominioCientifico"
+                       class="w-20 px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-bold text-center text-slate-900 focus:outline-none focus:border-emerald-600" />
+                <span class="text-xs font-bold text-slate-400">/ 10</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Criterio 2: Destreza Pedagógica -->
+          <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="text-xs font-bold text-slate-900 uppercase tracking-wider block">
+                  2. Destreza Pedagógica
+                </label>
+                <span class="text-[11px] text-slate-500">Metodología de enseñanza, uso de recursos didácticos y estructura de la clase (30%).</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <input type="number" min="0" max="10" step="0.1" formControlName="destrezaPedagogica"
+                       class="w-20 px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-bold text-center text-slate-900 focus:outline-none focus:border-emerald-600" />
+                <span class="text-xs font-bold text-slate-400">/ 10</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Criterio 3: Desenvolvimiento y Claridad -->
+          <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="text-xs font-bold text-slate-900 uppercase tracking-wider block">
+                  3. Desenvolvimiento y Claridad
+                </label>
+                <span class="text-[11px] text-slate-500">Fluidez verbal, manejo del tiempo y respuesta solvente a preguntas del tribunal (30%).</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <input type="number" min="0" max="10" step="0.1" formControlName="desenvolvimientoClaridad"
+                       class="w-20 px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-bold text-center text-slate-900 focus:outline-none focus:border-emerald-600" />
+                <span class="text-xs font-bold text-slate-400">/ 10</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Comentarios y Observaciones del Docente -->
+          <div>
+            <label class="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5">
+              Comentarios y Observaciones del Docente *
+            </label>
+            <textarea formControlName="observaciones" rows="3"
+                      placeholder="Ingrese los comentarios cualitativos, observaciones pedagógicas o recomendaciones para el postulante..."
+                      class="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"></textarea>
+            <p *ngIf="evaluacionForm.get('observaciones')?.touched && evaluacionForm.get('observaciones')?.invalid"
+               class="text-[11px] text-rose-600 mt-1 font-semibold">
+              Por favor ingrese las observaciones del docente (mínimo 5 caracteres).
+            </p>
+          </div>
+        </div>
+
+        <!-- Previsualización Promedio Ponderado -->
+        <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between">
+          <div>
+            <span class="text-xs font-bold text-emerald-900 uppercase block">Promedio Ponderado Estimado</span>
+            <span class="text-[11px] text-emerald-700">Calculado en base a los 3 criterios normativos</span>
+          </div>
+          <div class="text-2xl font-extrabold text-emerald-800">
+            {{ getPromedioPonderado().toFixed(2) }} <span class="text-xs text-emerald-600">/ 10</span>
+          </div>
+        </div>
+
+        <!-- Acciones Modal -->
+        <div class="pt-4 border-t border-slate-200 flex items-center justify-between gap-3">
+          <button type="button" (click)="rechazarDefensa()" [disabled]="isSubmitting"
+                  class="px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold rounded-xl text-xs transition-colors inline-flex items-center gap-2 cursor-pointer">
+            <i class="fa-solid fa-ban"></i>
+            <span>No Aprobar / Rechazar</span>
+          </button>
+          <div class="flex items-center gap-2">
+            <button type="button" (click)="cerrarModalCalificar()"
+                    class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs transition-colors cursor-pointer">
+              Cancelar
+            </button>
+            <button type="submit" [disabled]="isSubmitting || evaluacionForm.invalid"
+                    class="px-6 py-2.5 bg-emerald-700 hover:bg-emerald-800 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold rounded-xl text-xs shadow-md shadow-emerald-700/20 transition-all inline-flex items-center gap-2 cursor-pointer">
+              <i class="fa-solid fa-spinner fa-spin" *ngIf="isSubmitting"></i>
+              <i class="fa-solid fa-floppy-disk" *ngIf="!isSubmitting"></i>
+              <span>{{ isSubmitting ? 'Guardando Calificación...' : 'Guardar Calificación' }}</span>
+            </button>
+          </div>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div>

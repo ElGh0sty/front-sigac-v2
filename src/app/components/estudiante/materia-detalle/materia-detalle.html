@@ -1,0 +1,1798 @@
+<!-- Contenedor principal -->
+<div class="p-4 md:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
+
+  <!-- Banner de la materia -->
+  <div class="bg-gradient-to-r from-blue-50 to-indigo-50/60 border border-blue-200/80 rounded-2xl p-5 md:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-5 shadow-xs">
+    <div class="flex items-start sm:items-center gap-4 min-w-0">
+      <div class="w-14 h-14 rounded-2xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+        <i class="fa-solid fa-book-open text-2xl"></i>
+      </div>
+      <div class="min-w-0">
+        <div class="flex items-center gap-2 flex-wrap">
+          <h1 class="font-bold text-slate-900 text-xl md:text-2xl leading-tight truncate">{{ materia.nombre }}</h1>
+          <span class="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-full bg-blue-100/80 text-blue-700 border border-blue-200">
+            {{ materia.codigo }}
+          </span>
+        </div>
+
+        <p class="text-sm text-slate-600 mt-1 flex items-center gap-2">
+          <i class="fa-solid fa-chalkboard-user text-blue-500"></i>
+          <span>{{ materia.docente }}</span>
+        </p>
+
+        <div class="flex flex-wrap items-center gap-4 mt-2 text-xs text-slate-500 font-medium">
+          <span class="flex items-center gap-1.5">
+            <i class="fa-regular fa-user text-slate-400"></i>
+            {{ materia.estudiantes?.length || 0 }} estudiantes inscritos
+          </span>
+
+          <span class="flex items-center gap-1.5">
+            <i class="fa-solid fa-award text-amber-500"></i>
+            {{ materia.creditos || 4 }} créditos académicos
+          </span>
+
+          <span class="flex items-center gap-1.5">
+            <i class="fa-solid fa-calendar-check text-emerald-500"></i>
+            Semana {{ materia.semana || 1 }}/{{ materia.totalSemanas || 16 }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2 self-end md:self-center shrink-0">
+      <a routerLink="/estudiante/materias"
+         *ngIf="!canEdit"
+         class="text-xs font-semibold text-slate-600 bg-white hover:bg-slate-100 border border-slate-200 px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5">
+        <i class="fa-solid fa-arrow-left"></i>
+        Volver a Mis Materias
+      </a>
+
+      <a routerLink="/ayudante/materias"
+         *ngIf="esAyudante"
+         class="text-xs font-semibold text-slate-600 bg-white hover:bg-slate-100 border border-slate-200 px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5">
+        <i class="fa-solid fa-arrow-left"></i>
+        Volver a Ayudantías
+      </a>
+
+      <a routerLink="/docente/gestion-clases"
+         *ngIf="esDocente"
+         class="text-xs font-semibold text-slate-600 bg-white hover:bg-slate-100 border border-slate-200 px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5">
+        <i class="fa-solid fa-arrow-left"></i>
+        Gestión de Clases
+      </a>
+    </div>
+  </div>
+
+  <!-- RF-005: las reprogramaciones se notifican en el Centro de Avisos. -->
+
+  <!-- Tarjeta Principal con Pestañas -->
+  <div class="glass-card rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-xs">
+
+    <!-- Pestañas Superiores -->
+    <div class="flex items-center overflow-x-auto border-b border-slate-100 bg-slate-50/60 px-4 pt-1">
+
+      <button (click)="tabActual = 'recursos'"
+              class="flex items-center gap-2 px-5 py-3.5 text-sm font-semibold transition-all border-b-2 whitespace-nowrap"
+              [ngClass]="tabActual === 'recursos'
+                ? 'border-accent text-accent bg-white rounded-t-xl shadow-xs'
+                : 'border-transparent text-slate-500 hover:text-slate-800'">
+
+        <i class="fa-solid fa-folder-open"></i>
+        Recursos del Curso
+
+        <span class="text-xs px-2 py-0.5 rounded-full"
+              [ngClass]="tabActual === 'recursos'
+                ? 'bg-accent/10 text-accent font-bold'
+                : 'bg-slate-200/80 text-slate-600'">
+          {{ (resolviendoMateria || cargandoContenidoMateria) ? '...' : recursosDeMateria.length }}
+        </span>
+      </button>
+
+      <button (click)="tabActual = 'actividades'"
+              class="flex items-center gap-2 px-5 py-3.5 text-sm font-semibold transition-all border-b-2 whitespace-nowrap"
+              [ngClass]="tabActual === 'actividades'
+                ? 'border-accent text-accent bg-white rounded-t-xl shadow-xs'
+                : 'border-transparent text-slate-500 hover:text-slate-800'">
+
+        <i class="fa-solid fa-list-check"></i>
+        Actividades y Tareas
+
+        <span class="text-xs px-2 py-0.5 rounded-full"
+              [ngClass]="tabActual === 'actividades'
+                ? 'bg-accent/10 text-accent font-bold'
+                : 'bg-slate-200/80 text-slate-600'">
+          {{ (resolviendoMateria || cargandoContenidoMateria) ? '...' : actividadesDeMateria.length }}
+        </span>
+      </button>
+
+      <button *ngIf="!canEdit"
+              (click)="tabActual = 'diagnostico'"
+              class="flex items-center gap-2 px-5 py-3.5 text-sm font-semibold transition-all border-b-2 whitespace-nowrap"
+              [ngClass]="tabActual === 'diagnostico'
+                ? 'border-accent text-accent bg-white rounded-t-xl shadow-xs'
+                : 'border-transparent text-slate-500 hover:text-slate-800'">
+
+        <i class="fa-solid fa-stethoscope"></i>
+        Evaluación Diagnóstica
+
+        <span class="text-xs px-2 py-0.5 rounded-full"
+              [ngClass]="tabActual === 'diagnostico'
+                ? 'bg-accent/10 text-accent font-bold'
+                : 'bg-slate-200/80 text-slate-600'">
+          {{ (resolviendoMateria || cargandoDiagnosticos) ? '...' : evaluacionesDiagnosticas.length }}
+        </span>
+      </button>
+
+      <button *ngIf="rol === 'Estudiante'"
+              (click)="tabActual = 'cronograma'"
+              class="flex items-center gap-2 px-5 py-3.5 text-sm font-semibold transition-all border-b-2 whitespace-nowrap"
+              [ngClass]="tabActual === 'cronograma'
+                ? 'border-accent text-accent bg-white rounded-t-xl shadow-xs'
+                : 'border-transparent text-slate-500 hover:text-slate-800'">
+
+        <i class="fa-solid fa-calendar-days"></i>
+        Cronograma
+
+        <span class="text-xs px-2 py-0.5 rounded-full"
+              [ngClass]="tabActual === 'cronograma'
+                ? 'bg-accent/10 text-accent font-bold'
+                : 'bg-slate-200/80 text-slate-600'">
+          {{ (resolviendoMateria || cargandoCronograma) ? '...' : cronogramaCatedra.length }}
+        </span>
+      </button>
+
+      <button (click)="tabActual = 'asistencia'"
+              class="flex items-center gap-2 px-5 py-3.5 text-sm font-semibold transition-all border-b-2 whitespace-nowrap"
+              [ngClass]="tabActual === 'asistencia'
+                ? 'border-accent text-accent bg-white rounded-t-xl shadow-xs'
+                : 'border-transparent text-slate-500 hover:text-slate-800'">
+
+        <i class="fa-solid fa-clipboard-user"></i>
+        Asistencia y Clases
+
+        <span class="text-xs px-2 py-0.5 rounded-full"
+              [ngClass]="tabActual === 'asistencia'
+                ? 'bg-accent/10 text-accent font-bold'
+                : 'bg-slate-200/80 text-slate-600'">
+          {{ resolviendoMateria ? '...' : registrosAsistencia.length }}
+        </span>
+      </button>
+    </div>
+
+    <!-- Contenido de las Pestañas -->
+    <div class="p-5 md:p-7 space-y-6">
+
+      <!-- ==================== TAB 1: RECURSOS ==================== -->
+      <div *ngIf="tabActual === 'recursos'" class="space-y-5">
+
+        <!-- Barra de Temas y Navegación -->
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+          <div class="flex items-center gap-3 flex-wrap">
+
+            <div class="flex items-center gap-1">
+              <button (click)="irAlTemaAnterior()"
+                      [disabled]="indiceTemaActual === 0"
+                      class="w-9 h-9 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-100 text-slate-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+                <i class="fa-solid fa-chevron-left text-xs"></i>
+              </button>
+
+              <button (click)="irAlTemaSiguiente()"
+                      [disabled]="indiceTemaActual === temas.length - 1"
+                      class="w-9 h-9 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-100 text-slate-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+                <i class="fa-solid fa-chevron-right text-xs"></i>
+              </button>
+            </div>
+
+            <div>
+              <h2 class="text-lg md:text-xl font-bold text-slate-900 flex items-center gap-2">
+                {{ temaActualNombre }}
+
+                <span class="text-xs font-normal text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">
+                  {{ indiceTemaActual + 1 }} de {{ temas.length }}
+                </span>
+              </h2>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 flex-wrap">
+            <button *ngIf="canEdit"
+                    (click)="showAddTema = !showAddTema"
+                    class="text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5">
+              <i class="fa-solid fa-folder-plus"></i>
+              Nuevo Tema
+            </button>
+
+            <button *ngIf="canEdit"
+                    (click)="showAddRecurso = !showAddRecurso"
+                    class="text-xs font-semibold text-white bg-accent hover:bg-accent-dim px-4 py-2 rounded-xl transition-all flex items-center gap-2 shadow-xs">
+              <i class="fa-solid fa-plus"></i>
+              Añadir Recurso
+            </button>
+          </div>
+        </div>
+
+        <!-- Selector Rápido de Temas -->
+        <div class="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+          <button *ngFor="let t of temas; let idx = index"
+                  (click)="seleccionarTema(idx)"
+                  class="px-3 py-1.5 rounded-lg border font-medium whitespace-nowrap transition-all"
+                  [ngClass]="idx === indiceTemaActual
+                    ? 'bg-slate-900 text-white border-slate-900'
+                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'">
+            {{ t }}
+          </button>
+        </div>
+
+        <!-- Formulario: Añadir Nuevo Tema -->
+        <div *ngIf="showAddTema && canEdit"
+             class="p-4 rounded-xl border border-slate-200 bg-slate-50/80 space-y-3">
+
+          <h4 class="text-sm font-bold text-slate-800">
+            Crear Nuevo Tema en {{ materia.nombre }}
+          </h4>
+
+          <div class="flex gap-2">
+            <input [(ngModel)]="newTemaNombre"
+                   placeholder="Ej: Tema 3: Métodos de Optimización..."
+                   class="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-accent/20 outline-none" />
+
+            <button (click)="agregarNuevoTema()"
+                    class="px-4 py-2 text-xs font-semibold bg-accent text-white rounded-lg hover:bg-accent-dim transition-colors">
+              Guardar Tema
+            </button>
+
+            <button (click)="showAddTema = false"
+                    class="px-4 py-2 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors">
+              Cancelar
+            </button>
+          </div>
+        </div>
+
+        <!-- Formulario: Añadir Recurso -->
+        <div *ngIf="showAddRecurso && canEdit"
+             class="border border-accent-200 bg-accent-50/20 rounded-2xl p-5 space-y-4 shadow-sm">
+
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-cloud-arrow-up text-accent"></i>
+              Publicar Nuevo Recurso Educativo
+            </h3>
+
+            <span class="text-xs text-slate-500 font-medium">
+              Asignado a: {{ temaActualNombre }}
+            </span>
+          </div>
+
+          <div *ngIf="!cargandoContenidoMateria" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            <div class="space-y-1">
+              <label class="text-xs font-semibold text-slate-700">
+                Título del Recurso *
+              </label>
+
+              <input [(ngModel)]="nuevoRecurso.nombre"
+                     placeholder="Ej. Guía Práctica de Derivadas..."
+                     class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm bg-white focus:ring-2 focus:ring-accent/20 outline-none" />
+            </div>
+
+            <div class="space-y-1">
+              <label class="text-xs font-semibold text-slate-700">
+                Tipo de Contenido *
+              </label>
+
+              <select [(ngModel)]="nuevoRecurso.tipo"
+                      class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm bg-white focus:ring-2 focus:ring-accent/20 outline-none">
+                <option value="PDF">Documento PDF</option>
+                <option value="Video">Video / Grabación</option>
+                <option value="Enlace">Enlace Web / Webgrafía</option>
+                <option value="Simulador">Simulador / Software Interactivo</option>
+                <option value="Ejercicio">Guía de Ejercicios</option>
+              </select>
+            </div>
+
+            <div class="col-span-1 md:col-span-2 space-y-1">
+              <label class="text-xs font-semibold text-slate-700">
+                Enlace o URL del Recurso *
+              </label>
+
+              <input [(ngModel)]="nuevoRecurso.url"
+                     placeholder="https://ejemplo.edu/recurso.pdf o https://youtube.com/..."
+                     class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm bg-white focus:ring-2 focus:ring-accent/20 outline-none" />
+            </div>
+
+            <!-- Subida de archivo -->
+            <div class="col-span-1 md:col-span-2 space-y-1">
+              <label class="text-xs font-semibold text-slate-700">
+                Subir Archivo (opcional)
+              </label>
+
+              <div class="flex items-center gap-3">
+                <label class="inline-flex items-center gap-2 bg-white border border-slate-200 px-3 py-2 rounded-xl cursor-pointer">
+                  <i class="fa-solid fa-file-arrow-up text-slate-500"></i>
+
+                  <span class="text-xs text-slate-600">
+                    Seleccionar archivo...
+                  </span>
+
+                  <input type="file"
+                         (change)="onArchivoRecursoChange($event)"
+                         class="hidden" />
+                </label>
+
+                <div *ngIf="archivoRecurso" class="text-xs text-slate-600">
+                  <div class="font-medium">
+                    {{ archivoRecurso.nombre }}
+                  </div>
+
+                  <div class="text-[11px] text-slate-400">
+                    {{ archivoRecurso.tamanoKb }} KB
+                  </div>
+
+                  <button (click)="quitarArchivoRecurso()"
+                          class="mt-1 text-[11px] text-red-600 hover:underline">
+                    Quitar archivo
+                  </button>
+                </div>
+              </div>
+
+              <p class="text-[11px] text-slate-400 mt-1">
+                Si la subida al backend funciona, la URL pública se rellenará automáticamente.
+              </p>
+            </div>
+
+            <div class="col-span-1 md:col-span-2 space-y-1">
+              <label class="text-xs font-semibold text-slate-700">
+                Descripción o Instrucciones (Opcional)
+              </label>
+
+              <textarea [(ngModel)]="nuevoRecurso.descripcion"
+                        placeholder="Breve explicación sobre qué contiene este recurso..."
+                        rows="2"
+                        class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm bg-white focus:ring-2 focus:ring-accent/20 outline-none resize-none"></textarea>
+            </div>
+
+            <div class="col-span-1 md:col-span-2 space-y-1">
+              <label class="text-xs font-semibold text-slate-700">
+                Enlaces adicionales (Links)
+              </label>
+
+              <textarea [(ngModel)]="nuevoRecurso.linksString"
+                        placeholder="Agregar enlaces adicionales uno por línea o separados por comas"
+                        rows="2"
+                        class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm bg-white focus:ring-2 focus:ring-accent/20 outline-none resize-none"></textarea>
+
+              <p class="text-[11px] text-slate-400 mt-1">
+                Ej: https://youtu.be/..., https://drive.google.com/... o uno por línea.
+              </p>
+            </div>
+
+            <div class="col-span-1 md:col-span-2 flex items-center gap-2">
+              <input type="checkbox"
+                     id="esencialCheck"
+                     [(ngModel)]="nuevoRecurso.esencial"
+                     class="w-4 h-4 rounded text-accent focus:ring-accent" />
+
+              <label for="esencialCheck"
+                     class="text-xs font-medium text-slate-700 cursor-pointer">
+                Marcar como
+                <strong class="text-amber-600">
+                  Material Esencial / Obligatorio
+                </strong>
+                para el examen
+              </label>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 pt-2 border-t border-slate-200/60">
+            <button (click)="agregarRecurso()"
+                    class="px-5 py-2 text-xs font-semibold bg-accent text-white rounded-xl hover:bg-accent-dim transition-colors shadow-xs">
+              Publicar Recurso
+            </button>
+
+            <button (click)="showAddRecurso = false"
+                    class="px-5 py-2 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors">
+              Cancelar
+            </button>
+          </div>
+        </div>
+
+        <!-- Lista de Recursos -->
+        <div *ngIf="cargandoContenidoMateria"
+             class="text-center py-12 px-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50/50">
+          <div class="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-3">
+            <i class="fa-solid fa-spinner fa-spin text-xl"></i>
+          </div>
+          <p class="text-sm font-semibold text-slate-700">
+            Cargando recursos de la materia...
+          </p>
+        </div>
+
+        <div *ngIf="!cargandoContenidoMateria && recursosDelTemaActual.length === 0"
+             class="text-center py-12 px-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50/50">
+
+          <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+            <i class="fa-solid fa-folder-open text-xl"></i>
+          </div>
+
+          <p class="text-sm font-semibold text-slate-700">
+            No hay recursos subidos en este tema aún.
+          </p>
+
+          <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+            {{ canEdit
+            ? 'Pulsa en "Añadir Recurso" para compartir guías, lecturas o enlaces con los estudiantes.'
+            : 'El docente o ayudante asignado publicará material en esta sección próximamente.' }}
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          <div *ngFor="let r of recursosDelTemaActual"
+               class="flex flex-col justify-between p-4 rounded-2xl border transition-all duration-200 hover:shadow-sm"
+               [ngClass]="r.visto
+                 ? 'bg-slate-50/80 border-slate-200'
+                 : 'bg-white border-slate-200/90'">
+
+            <div class="flex items-start gap-3.5">
+
+              <span class="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center shadow-xs"
+                    [ngClass]="{
+                      'bg-red-50 text-red-600 border border-red-100': r.tipo === 'PDF',
+                      'bg-indigo-50 text-indigo-600 border border-indigo-100': r.tipo === 'Video',
+                      'bg-emerald-50 text-emerald-600 border border-emerald-100': r.tipo === 'Enlace',
+                      'bg-amber-50 text-amber-600 border border-amber-100': r.tipo === 'Simulador',
+                      'bg-blue-50 text-blue-600 border border-blue-100': r.tipo === 'Ejercicio' || !r.tipo
+                    }">
+
+                <i class="fa-solid text-base"
+                   [ngClass]="{
+                     'fa-file-pdf': r.tipo === 'PDF',
+                     'fa-circle-play': r.tipo === 'Video',
+                     'fa-link': r.tipo === 'Enlace',
+                     'fa-shapes': r.tipo === 'Simulador',
+                     'fa-pen-to-square': r.tipo === 'Ejercicio' || !r.tipo
+                   }"></i>
+              </span>
+
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-1.5 flex-wrap">
+
+                  <a [href]="r.url"
+                     target="_blank"
+                     rel="noopener noreferrer"
+                     class="text-sm font-semibold hover:underline leading-snug"
+                     [ngClass]="r.visto ? 'text-slate-500' : 'text-slate-900'">
+                    {{ r.titulo }}
+                  </a>
+
+                  <span *ngIf="r.esEsencial"
+                        class="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <i class="fa-solid fa-star text-[9px]"></i>
+                    Esencial
+                  </span>
+                </div>
+
+                <p class="text-xs text-slate-500 mt-1 line-clamp-2"
+                   *ngIf="r.descripcion">
+                  {{ r.descripcion }}
+                </p>
+
+                <div class="flex items-center gap-3 mt-2 text-[11px] text-slate-400">
+                  <span>{{ r.tipo }}</span>
+                  <span>·</span>
+                  <span>{{ r.creadoPor || 'Docente' }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Acciones -->
+            <div class="flex items-center justify-between mt-3 pt-3 border-t border-slate-100 text-xs">
+
+              <div class="flex items-center gap-2">
+                <button (click)="descargarRecursoDocumento(r)"
+                        class="font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors">
+                  <i class="fa-solid fa-download text-[10px]"></i>
+                  Descargar
+                </button>
+
+                <a [href]="r.url"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   class="font-semibold text-accent hover:text-accent-dim flex items-center gap-1">
+                  <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                  Abrir enlace
+                </a>
+              </div>
+
+              <div class="flex items-center gap-1.5">
+
+                <button *ngIf="canEdit"
+                        (click)="toggleEsencial(r.id)"
+                        title="Alternar esencial"
+                        class="px-2 py-1 rounded-lg border flex items-center gap-1 text-[11px] font-medium transition-colors"
+                        [ngClass]="r.esEsencial
+                          ? 'bg-amber-50 text-amber-600 border-amber-200'
+                          : 'bg-white text-slate-400 border-slate-200 hover:text-amber-500'">
+
+                  <i class="fa-solid fa-star text-[10px]"></i>
+                  <span>{{ r.esEsencial ? 'Esencial' : 'Opcional' }}</span>
+                </button>
+
+                <button (click)="toggleVisto(r.id)"
+                        title="Marcar visto"
+                        class="px-2.5 py-1 rounded-lg border flex items-center gap-1.5 text-[11px] font-medium transition-colors"
+                        [ngClass]="r.visto
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'">
+
+                  <i class="fa-solid"
+                     [ngClass]="r.visto
+                       ? 'fa-check text-emerald-600'
+                       : 'fa-eye text-slate-400'"></i>
+
+                  <span>{{ r.visto ? 'Visto' : 'Marcar visto' }}</span>
+                </button>
+
+                <button *ngIf="canEdit"
+                        (click)="eliminarRecurso(r.id)"
+                        title="Eliminar recurso"
+                        class="w-7 h-7 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition-colors">
+                  <i class="fa-regular fa-trash-can text-xs"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== TAB 2: ACTIVIDADES ==================== -->
+      <div *ngIf="tabActual === 'actividades'" class="space-y-5">
+
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900">
+              Actividades, Talleres y Evaluaciones
+            </h2>
+
+            <p class="text-xs text-slate-500 mt-0.5">
+              Entregas y seguimiento de tareas para {{ materia.nombre }}.
+            </p>
+          </div>
+
+          <button *ngIf="canEdit"
+                  (click)="showAddActividad = !showAddActividad"
+                  class="text-xs font-semibold text-white bg-accent hover:bg-accent-dim px-4 py-2 rounded-xl transition-all flex items-center gap-2 shadow-xs">
+            <i class="fa-solid fa-plus"></i>
+            Nueva Actividad
+          </button>
+        </div>
+
+        <!-- Formulario: Nueva Actividad -->
+        <div *ngIf="showAddActividad && canEdit"
+             class="border border-accent-200 bg-accent-50/20 rounded-2xl p-5 space-y-4 shadow-sm">
+
+          <p class="text-sm font-bold text-slate-900">
+            Crear Asignación / Actividad Evaluativa
+          </p>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+            <div class="col-span-1 md:col-span-2 space-y-1">
+              <label class="text-xs font-semibold text-slate-700">
+                Título de la Actividad *
+              </label>
+
+              <input [(ngModel)]="nuevaActividad.nombre"
+                     placeholder="Ej. Taller 2: Integrales de Línea..."
+                     class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm bg-white focus:ring-2 focus:ring-accent/20 outline-none" />
+            </div>
+
+            <div class="space-y-1">
+              <label class="text-xs font-semibold text-slate-700">
+                Tipo de Actividad *
+              </label>
+
+              <select [(ngModel)]="nuevaActividad.tipo"
+                      class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm bg-white focus:ring-2 focus:ring-accent/20 outline-none">
+
+                <option value="Taller">Taller Práctico</option>
+                <option value="Tarea">Tarea Individual</option>
+                <option value="Quiz">Quiz / Cuestionario</option>
+                <option value="Proyecto">Proyecto Semestral</option>
+                <option value="Examen">Examen Parcial</option>
+              </select>
+            </div>
+
+            <div class="space-y-1">
+              <label class="text-xs font-semibold text-slate-700">
+                Fecha Límite de Entrega *
+              </label>
+
+              <input type="date"
+                     [(ngModel)]="nuevaActividad.fechaEntrega"
+                     class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm bg-white focus:ring-2 focus:ring-accent/20 outline-none" />
+            </div>
+
+            <div class="col-span-1 md:col-span-2 space-y-1">
+              <label class="text-xs font-semibold text-slate-700">
+                Descripción o Criterios de Evaluación
+              </label>
+
+              <textarea [(ngModel)]="nuevaActividad.descripcion"
+                        placeholder="Instrucciones sobre entregables, formato y ponderación..."
+                        rows="2"
+                        class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm bg-white focus:ring-2 focus:ring-accent/20 outline-none resize-none"></textarea>
+            </div>
+          </div>
+
+          <div class="flex gap-2 pt-2 border-t border-slate-200/60">
+            <button (click)="agregarActividad()"
+                    class="px-5 py-2 text-xs font-semibold bg-accent text-white rounded-xl hover:bg-accent-dim transition-colors shadow-xs">
+              Guardar Actividad
+            </button>
+
+            <button (click)="showAddActividad = false"
+                    class="px-5 py-2 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors">
+              Cancelar
+            </button>
+          </div>
+        </div>
+
+        <!-- Lista -->
+        <div *ngIf="cargandoContenidoMateria"
+             class="text-center py-12 px-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50/50">
+          <div class="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-3">
+            <i class="fa-solid fa-spinner fa-spin text-xl"></i>
+          </div>
+          <p class="text-sm font-semibold text-slate-700">
+            Cargando actividades de la materia...
+          </p>
+        </div>
+
+        <div *ngIf="!cargandoContenidoMateria && actividadesDeMateria.length === 0"
+             class="text-center py-12 px-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50/50">
+
+          <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+            <i class="fa-solid fa-clipboard-list text-xl"></i>
+          </div>
+
+          <p class="text-sm font-semibold text-slate-700">
+            No hay actividades programadas en este momento.
+          </p>
+
+          <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+            {{ canEdit
+            ? 'Crea talleres, quizzes o proyectos para evaluar el desempeño estudiantil.'
+            : 'No tienes tareas pendientes para esta materia.' }}
+          </p>
+        </div>
+
+        <div class="space-y-3" *ngIf="!cargandoContenidoMateria && actividadesDeMateria.length > 0">
+
+          <div *ngFor="let a of actividadesDeMateria"
+               class="p-5 rounded-2xl border border-slate-200 bg-white hover:shadow-xs transition-all">
+
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+
+              <div class="flex-1 min-w-0">
+
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="font-bold text-slate-900 text-base">
+                    {{ a.titulo }}
+                  </h3>
+
+                  <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold"
+                        [ngClass]="{
+                          'bg-amber-50 text-amber-700 border border-amber-200': a.estado === 'pendiente',
+                          'bg-emerald-50 text-emerald-700 border border-emerald-200': a.estado === 'calificada',
+                          'bg-blue-50 text-blue-700 border border-blue-200': a.estado === 'entregada'
+                        }">
+
+                    {{ a.estado === 'pendiente'
+                    ? 'Pendiente'
+                    : a.estado === 'calificada'
+                      ? 'Calificada'
+                      : 'Entregada' }}
+                  </span>
+
+                  <span class="text-xs text-slate-600 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full font-medium">
+                    {{ a.tipo }}
+                  </span>
+                </div>
+
+                <p class="text-xs text-slate-600 mt-2 leading-relaxed"
+                   *ngIf="a.descripcion">
+                  {{ a.descripcion }}
+                </p>
+
+                <div class="flex items-center gap-4 mt-3 text-xs text-slate-500 font-medium">
+
+                  <span class="flex items-center gap-1.5 text-slate-700">
+                    <i class="fa-regular fa-clock text-slate-400"></i>
+                    Entrega:
+                    <strong>{{ formatearFecha(a.fechaEntrega) }}</strong>
+                  </span>
+
+                  <span *ngIf="a.nota !== undefined"
+                        class="text-emerald-700 font-bold bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200">
+                    Nota: {{ a.nota }} / 5.0
+                  </span>
+                </div>
+              </div>
+
+              <!-- Acciones -->
+              <div class="flex items-center gap-2 shrink-0 self-end sm:self-center">
+
+                <button (click)="descargarActividadDocumento(a)"
+                        title="Descargar guía o rúbrica de la actividad"
+                        class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 shadow-2xs">
+
+                  <i class="fa-solid fa-download text-emerald-600"></i>
+                  <span>Guía</span>
+                </button>
+
+                <a *ngIf="!canEdit && a.estado === 'pendiente'"
+                   [routerLink]="['/estudiante/actividades', a.id]"
+                   class="px-4 py-2 bg-accent text-white text-xs font-semibold rounded-xl hover:bg-accent-dim transition-all flex items-center gap-1.5 shadow-xs">
+
+                  <i class="fa-solid fa-cloud-arrow-up"></i>
+                  <span>Entregar Tarea</span>
+                </a>
+
+                <a *ngIf="!canEdit && (a.estado === 'entregada' || a.estado === 'calificada')"
+                   [routerLink]="['/estudiante/actividades', a.id]"
+                   class="px-3.5 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 border"
+                   [ngClass]="a.estado === 'calificada'
+                     ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+                     : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'">
+
+                  <i class="fa-solid"
+                     [ngClass]="a.estado === 'calificada'
+                       ? 'fa-square-check text-emerald-600'
+                       : 'fa-file-lines text-blue-600'"></i>
+
+                  <span>
+                    {{ a.estado === 'calificada'
+                    ? 'Ver Calificación'
+                    : 'Ver Entrega Realizada' }}
+                  </span>
+                </a>
+
+                <button *ngIf="canEdit"
+                        (click)="calificarActividad(a.id)"
+                        class="px-3.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5 shadow-xs">
+
+                  <i class="fa-solid fa-clipboard-check"></i>
+                  Revisar y Calificar
+                </button>
+
+                <button *ngIf="canEdit"
+                        (click)="eliminarActividad(a.id)"
+                        class="w-8 h-8 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition-colors"
+                        title="Eliminar actividad">
+
+                  <i class="fa-regular fa-trash-can text-sm"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== TAB 3: EVALUACIÓN DIAGNÓSTICA ==================== -->
+      <div *ngIf="tabActual === 'diagnostico' && !canEdit"
+           class="space-y-5">
+
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+
+          <div>
+            <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-stethoscope text-indigo-600"></i>
+              Evaluación Diagnóstica
+            </h2>
+
+            <p class="text-xs text-slate-500 mt-1">
+              Actividades iniciales para conocer tus conocimientos.
+              Estas evaluaciones no afectan tu promedio académico.
+            </p>
+          </div>
+
+          <button type="button"
+                  (click)="cargarEvaluacionesDiagnosticas()"
+                  [disabled]="cargandoDiagnosticos"
+                  class="px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2">
+
+            <i class="fa-solid fa-rotate-right"
+               [class.fa-spin]="cargandoDiagnosticos"></i>
+
+            Actualizar
+          </button>
+        </div>
+
+        <div *ngIf="errorDiagnostico && !modalDiagnostico"
+             class="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm flex items-start gap-2">
+
+          <i class="fa-solid fa-circle-exclamation mt-0.5"></i>
+          <span>{{ errorDiagnostico }}</span>
+        </div>
+
+        <div *ngIf="cargandoDiagnosticos && evaluacionesDiagnosticas.length === 0"
+             class="py-12 text-center">
+
+          <div class="w-11 h-11 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-3">
+            <i class="fa-solid fa-spinner fa-spin"></i>
+          </div>
+
+          <p class="text-sm font-semibold text-slate-700">
+            Cargando evaluaciones diagnósticas...
+          </p>
+        </div>
+
+        <div *ngIf="!cargandoDiagnosticos && evaluacionesDiagnosticas.length === 0"
+             class="text-center py-12 px-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50/50">
+
+          <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+            <i class="fa-solid fa-clipboard-question text-xl"></i>
+          </div>
+
+          <p class="text-sm font-semibold text-slate-700">
+            No hay evaluaciones diagnósticas para esta materia.
+          </p>
+
+          <p class="text-xs text-slate-400 mt-1">
+            Cuando el docente publique una evaluación diagnóstica aparecerá aquí.
+          </p>
+        </div>
+
+        <div *ngIf="evaluacionesDiagnosticas.length > 0"
+             class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+          <div *ngFor="let evaluacion of evaluacionesDiagnosticas"
+               class="p-5 rounded-2xl border border-slate-200 bg-white shadow-2xs hover:shadow-sm transition-all">
+
+            <div class="flex items-start justify-between gap-3">
+
+              <div class="flex items-start gap-3 min-w-0">
+
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                     [ngClass]="evaluacion.tipoEvaluacion === 'Cuestionario'
+                       ? 'bg-violet-50 text-violet-600 border border-violet-100'
+                       : 'bg-blue-50 text-blue-600 border border-blue-100'">
+
+                  <i class="fa-solid"
+                     [ngClass]="evaluacion.tipoEvaluacion === 'Cuestionario'
+                       ? 'fa-list-check'
+                       : 'fa-file-arrow-up'"></i>
+                </div>
+
+                <div class="min-w-0">
+
+                  <h3 class="font-bold text-slate-900 text-sm leading-snug">
+                    {{ evaluacion.nombre }}
+                  </h3>
+
+                  <div class="flex flex-wrap gap-2 mt-2">
+
+                    <span class="text-[11px] font-semibold px-2.5 py-1 rounded-full border"
+                          [ngClass]="evaluacion.tipoEvaluacion === 'Cuestionario'
+                            ? 'bg-violet-50 text-violet-700 border-violet-200'
+                            : 'bg-blue-50 text-blue-700 border-blue-200'">
+                      {{ evaluacion.tipoEvaluacion }}
+                    </span>
+
+                    <span class="text-[11px] font-semibold px-2.5 py-1 rounded-full border"
+                          [ngClass]="{
+                            'bg-emerald-50 text-emerald-700 border-emerald-200': evaluacion.disponibilidad === 'Disponible',
+                            'bg-amber-50 text-amber-700 border-amber-200': evaluacion.disponibilidad === 'NoIniciada',
+                            'bg-slate-100 text-slate-600 border-slate-200': evaluacion.disponibilidad === 'Cerrada' || evaluacion.disponibilidad === 'SinFechas'
+                          }">
+
+                      {{ textoDisponibilidadDiagnostico(evaluacion) }}
+                    </span>
+
+                    <span class="text-[11px] font-semibold px-2.5 py-1 rounded-full border"
+                          [ngClass]="{
+                            'bg-amber-50 text-amber-700 border-amber-200': evaluacion.estadoEntrega === 'Pendiente',
+                            'bg-blue-50 text-blue-700 border-blue-200': evaluacion.estadoEntrega === 'Entregado',
+                            'bg-emerald-50 text-emerald-700 border-emerald-200': evaluacion.estadoEntrega === 'Calificado'
+                          }">
+
+                      {{ textoEstadoEntregaDiagnostico(evaluacion) }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div *ngIf="evaluacion.calificacion !== null"
+                   class="shrink-0 text-center bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2">
+
+                <p class="text-[10px] uppercase tracking-wide text-emerald-600 font-bold">
+                  Nota
+                </p>
+
+                <p class="text-lg font-black text-emerald-700">
+                  {{ evaluacion.calificacion }}
+                  <span class="text-xs">/10</span>
+                </p>
+              </div>
+            </div>
+
+            <p *ngIf="evaluacion.instrucciones"
+               class="text-xs text-slate-600 mt-4 leading-relaxed line-clamp-3">
+              {{ evaluacion.instrucciones }}
+            </p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4 text-[11px] text-slate-500">
+
+              <div class="bg-slate-50 border border-slate-100 rounded-xl p-2.5">
+                <span class="font-semibold text-slate-700">
+                  Inicio:
+                </span>
+                <br>
+                {{ formatearFechaHoraDiagnostico(evaluacion.fechaInicio) }}
+              </div>
+
+              <div class="bg-slate-50 border border-slate-100 rounded-xl p-2.5">
+                <span class="font-semibold text-slate-700">
+                  Fin:
+                </span>
+                <br>
+                {{ formatearFechaHoraDiagnostico(evaluacion.fechaFin) }}
+              </div>
+            </div>
+
+            <div *ngIf="evaluacion.estadoEntrega === 'Calificado' && evaluacion.observacion"
+                 class="mt-3 p-3 rounded-xl bg-emerald-50/70 border border-emerald-200 text-xs text-emerald-800">
+
+              <strong>Observación del docente:</strong>
+              {{ evaluacion.observacion }}
+            </div>
+
+            <div class="flex items-center justify-between gap-3 mt-4 pt-4 border-t border-slate-100">
+
+              <span class="text-[11px] text-slate-400">
+                Esta evaluación no afecta tu promedio.
+              </span>
+
+              <button type="button"
+                      (click)="abrirEvaluacionDiagnostica(evaluacion)"
+                      class="px-4 py-2 rounded-xl text-xs font-bold transition-colors flex items-center gap-2"
+                      [ngClass]="evaluacion.puedeRealizar
+                        ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'">
+
+                <i class="fa-solid"
+                   [ngClass]="evaluacion.puedeRealizar
+                     ? 'fa-pen-to-square'
+                     : 'fa-eye'"></i>
+
+                {{ evaluacion.puedeRealizar
+                ? 'Realizar / Ver'
+                : 'Ver detalle' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== TAB 4: CRONOGRAMA ==================== -->
+      <div *ngIf="tabActual === 'cronograma' && rol === 'Estudiante'"
+           class="space-y-5">
+
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-calendar-days text-blue-600"></i>
+              Cronograma de la Cátedra
+            </h2>
+
+            <p class="text-xs text-slate-500 mt-1">
+              Consulta la planificación vigente de {{ materia.nombre }}.
+            </p>
+          </div>
+
+          <button type="button"
+                  (click)="cargarCronogramaCatedra()"
+                  [disabled]="cargandoCronograma"
+                  class="px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2">
+            <i class="fa-solid fa-rotate-right"
+               [class.fa-spin]="cargandoCronograma"></i>
+            Actualizar
+          </button>
+        </div>
+
+        <div *ngIf="cargandoCronograma && cronogramaCatedra.length === 0"
+             class="py-12 text-center">
+          <div class="w-11 h-11 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-3">
+            <i class="fa-solid fa-spinner fa-spin"></i>
+          </div>
+          <p class="text-sm font-semibold text-slate-700">
+            Cargando cronograma...
+          </p>
+        </div>
+
+        <div *ngIf="!cargandoCronograma && errorCronograma"
+             class="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="flex items-start gap-2">
+            <i class="fa-solid fa-circle-exclamation mt-0.5"></i>
+            <span>{{ errorCronograma }}</span>
+          </div>
+
+          <button type="button"
+                  (click)="cargarCronogramaCatedra()"
+                  class="text-xs font-bold text-red-700 hover:underline shrink-0">
+            Reintentar
+          </button>
+        </div>
+
+        <div *ngIf="!cargandoCronograma && !errorCronograma && cronogramaCatedra.length === 0"
+             class="text-center py-12 px-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50/50">
+          <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+            <i class="fa-regular fa-calendar text-xl"></i>
+          </div>
+
+          <p class="text-sm font-semibold text-slate-700">
+            No hay actividades planificadas.
+          </p>
+
+          <p class="text-xs text-slate-400 mt-1">
+            Cuando el docente registre actividades en el cronograma aparecerán aquí.
+          </p>
+        </div>
+
+        <div *ngIf="cronogramaCatedra.length > 0" class="space-y-3">
+          <div *ngFor="let item of cronogramaCatedra; let i = index"
+               class="rounded-2xl border border-slate-200 bg-white p-4 md:p-5 shadow-2xs">
+
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div class="flex items-start gap-4 min-w-0">
+                <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 border border-blue-100 flex items-center justify-center shrink-0 font-black text-xs">
+                  {{ (i + 1).toString().padStart(2, '0') }}
+                </div>
+
+                <div class="min-w-0">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <h3 class="text-sm md:text-base font-bold text-slate-900">
+                      {{ item.descripcion }}
+                    </h3>
+
+                    <span class="text-[11px] font-bold px-2.5 py-1 rounded-full border"
+                          [ngClass]="getEstadoCronograma(item) === 'Realizada'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : 'bg-blue-50 text-blue-700 border-blue-200'">
+                      <i class="fa-solid mr-1"
+                         [ngClass]="getEstadoCronograma(item) === 'Realizada'
+                           ? 'fa-circle-check'
+                           : 'fa-calendar-check'"></i>
+                      {{ getEstadoCronograma(item) }}
+                    </span>
+
+                    <span *ngIf="tieneCambioCronograma(item)"
+                          class="text-[11px] font-bold px-2.5 py-1 rounded-full border bg-amber-50 text-amber-700 border-amber-200">
+                      <i class="fa-solid fa-rotate mr-1"></i>
+                      Reprogramada
+                    </span>
+                  </div>
+
+                  <div class="flex flex-wrap items-center gap-x-5 gap-y-2 mt-3 text-xs text-slate-500">
+                    <span class="flex items-center gap-1.5">
+                      <i class="fa-regular fa-calendar text-blue-500"></i>
+                      <strong class="text-slate-700">Fecha prevista:</strong>
+                      {{ formatearFechaCronograma(item.fechaPrevista) }}
+                    </span>
+
+                    <span *ngIf="item.fechaReal"
+                          class="flex items-center gap-1.5">
+                      <i class="fa-solid fa-circle-check text-emerald-500"></i>
+                      <strong class="text-slate-700">Fecha realizada:</strong>
+                      {{ formatearFechaCronograma(item.fechaReal) }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <button *ngIf="tieneCambioCronograma(item)"
+                      type="button"
+                      (click)="abrirUltimoCambioCronograma(item)"
+                      class="shrink-0 px-4 py-2 text-xs font-bold rounded-xl bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors flex items-center justify-center gap-2">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                Ver último cambio
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== TAB 5: ASISTENCIA ==================== -->
+      <div *ngIf="tabActual === 'asistencia'" class="space-y-5">
+
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+
+          <div>
+            <h2 class="text-lg font-bold text-slate-900">
+              Control de Asistencia y Bitácora de Clases
+            </h2>
+
+            <p class="text-xs text-slate-500 mt-0.5">
+              Registro de sesiones presenciales y virtuales de {{ materia.nombre }}.
+            </p>
+          </div>
+
+          <button *ngIf="canEdit"
+                  (click)="showAddClase = !showAddClase"
+                  class="text-xs font-semibold text-white bg-accent hover:bg-accent-dim px-4 py-2 rounded-xl transition-all flex items-center gap-2 shadow-xs">
+
+            <i class="fa-solid fa-plus"></i>
+            Registrar Clase
+          </button>
+        </div>
+
+        <!-- Formulario -->
+        <div *ngIf="showAddClase && canEdit"
+             class="border border-slate-200 rounded-2xl p-5 bg-slate-50/70 space-y-3">
+
+          <p class="text-sm font-bold text-slate-800">
+            Nueva Sesión de Clase
+          </p>
+
+          <input [(ngModel)]="newClaseTema"
+                 placeholder="Tema o contenido dictado en la sesión..."
+                 class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm bg-white focus:ring-2 focus:ring-accent/20 outline-none" />
+
+          <div class="flex gap-2">
+
+            <button (click)="agregarClase()"
+                    class="px-5 py-2 text-xs font-semibold bg-accent text-white rounded-xl hover:bg-accent-dim transition-colors shadow-xs">
+              Crear Registro
+            </button>
+
+            <button (click)="showAddClase = false"
+                    class="px-5 py-2 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors">
+              Cancelar
+            </button>
+          </div>
+        </div>
+
+        <div *ngIf="registrosAsistencia.length === 0"
+             class="text-center py-12 px-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50/50">
+
+          <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+            <i class="fa-solid fa-users-viewfinder text-xl"></i>
+          </div>
+
+          <p class="text-sm font-semibold text-slate-700">
+            No hay registros de asistencia en este curso.
+          </p>
+
+          <p class="text-xs text-slate-400 mt-1">
+            Registra sesiones para realizar el seguimiento del estudiantado.
+          </p>
+        </div>
+
+        <!-- Listado -->
+        <div *ngFor="let reg of registrosAsistencia"
+             class="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-2xs space-y-3 p-5">
+
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+
+            <div>
+              <div class="flex items-center gap-2">
+
+                <span class="px-2 py-0.5 rounded-md bg-accent/10 text-accent font-bold text-xs">
+                  Sesión
+                </span>
+
+                <span class="text-xs text-slate-400 font-medium">
+                  {{ formatearFecha(reg.fecha) }}
+                </span>
+              </div>
+
+              <h3 class="text-base font-bold text-slate-900 mt-0.5">
+                {{ reg.tema }}
+              </h3>
+            </div>
+
+            <div class="flex items-center gap-2">
+
+              <span class="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
+                {{ contarPresentes(reg.asistentes) }} / {{ reg.asistentes.length }}
+                Presentes
+              </span>
+
+              <span class="text-xs font-bold px-3 py-1 rounded-full"
+                    [ngClass]="(contarPresentes(reg.asistentes) / (reg.asistentes.length || 1)) >= 0.8
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : 'bg-amber-100 text-amber-800'">
+
+                {{ Math.round(
+                (contarPresentes(reg.asistentes) /
+                  (reg.asistentes.length || 1)) * 100
+              ) }}% Asistencia
+              </span>
+            </div>
+          </div>
+
+          <!-- Herramientas -->
+          <div *ngIf="canEdit"
+               class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-1">
+
+            <div class="relative flex-1 max-w-sm">
+
+              <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+
+              <input type="text"
+                     [(ngModel)]="busquedaEstudianteAsistencia"
+                     placeholder="Buscar alumno por nombre o correo..."
+                     class="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-accent/20 transition-all" />
+            </div>
+
+            <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs shrink-0">
+
+              <button (click)="filtroEstadoAsistencia = 'todos'"
+                      class="px-2.5 py-1 rounded-lg font-medium transition-all"
+                      [ngClass]="filtroEstadoAsistencia === 'todos'
+                        ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                        : 'text-slate-500 hover:text-slate-800'">
+
+                Todos ({{ reg.asistentes.length }})
+              </button>
+
+              <button (click)="filtroEstadoAsistencia = 'presentes'"
+                      class="px-2.5 py-1 rounded-lg font-medium transition-all"
+                      [ngClass]="filtroEstadoAsistencia === 'presentes'
+                        ? 'bg-white text-emerald-700 shadow-2xs font-bold'
+                        : 'text-slate-500 hover:text-slate-800'">
+
+                Presentes ({{ contarPresentes(reg.asistentes) }})
+              </button>
+
+              <button (click)="filtroEstadoAsistencia = 'ausentes'"
+                      class="px-2.5 py-1 rounded-lg font-medium transition-all"
+                      [ngClass]="filtroEstadoAsistencia === 'ausentes'
+                        ? 'bg-white text-rose-700 shadow-2xs font-bold'
+                        : 'text-slate-500 hover:text-slate-800'">
+
+                Ausentes ({{ reg.asistentes.length - contarPresentes(reg.asistentes) }})
+              </button>
+            </div>
+
+            <div class="flex items-center gap-1.5 shrink-0">
+
+              <button (click)="marcarTodosAsistencia(reg.id, true)"
+                      class="px-2.5 py-1.5 text-xs font-semibold bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition-colors flex items-center gap-1">
+
+                <i class="fa-solid fa-check-double text-emerald-600"></i>
+                Todos Presentes
+              </button>
+
+              <button (click)="marcarTodosAsistencia(reg.id, false)"
+                      class="px-2.5 py-1.5 text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-rose-50 hover:text-rose-700 border border-slate-200 rounded-xl transition-colors flex items-center gap-1">
+
+                <i class="fa-solid fa-xmark"></i>
+                Todos Ausentes
+              </button>
+            </div>
+          </div>
+
+          <!-- Alumnos -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-2">
+
+            <div *ngFor="let est of getEstudiantesFiltrados(reg.asistentes); let ei = index"
+                 (click)="canEdit ? toggleAsistencia(reg.id, ei) : null"
+                 class="flex items-center justify-between p-3 rounded-xl border transition-all"
+                 [ngClass]="{
+                   'cursor-pointer select-none': canEdit,
+                   'bg-emerald-50/40 border-emerald-200 hover:bg-emerald-50/70': est.presente,
+                   'bg-white border-slate-200 hover:bg-slate-50': !est.presente
+                 }">
+
+              <div class="flex items-center gap-3 min-w-0">
+
+                <div class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 transition-colors"
+                     [ngClass]="est.presente
+                       ? 'bg-emerald-600 text-white shadow-2xs'
+                       : 'bg-slate-100 text-slate-600 border border-slate-200'">
+
+                  {{ est.nombre.substring(0, 2).toUpperCase() }}
+                </div>
+
+                <div class="min-w-0">
+                  <p class="text-xs font-bold text-slate-900 truncate">
+                    {{ est.nombre }}
+                  </p>
+
+                  <p class="text-[11px] text-slate-400 truncate">
+                    {{ est.email }}
+                  </p>
+                </div>
+              </div>
+
+              <button *ngIf="canEdit"
+                      type="button"
+                      class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all border shrink-0 flex items-center gap-1.5 shadow-2xs"
+                      [ngClass]="est.presente
+                        ? 'bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700'
+                        : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'">
+
+                <i class="fa-solid"
+                   [ngClass]="est.presente
+                     ? 'fa-check'
+                     : 'fa-xmark text-slate-400'"></i>
+
+                <span>
+                  {{ est.presente ? 'Presente' : 'Ausente' }}
+                </span>
+              </button>
+
+              <span *ngIf="!canEdit"
+                    class="px-2.5 py-1 rounded-full text-xs font-semibold border flex items-center gap-1"
+                    [ngClass]="est.presente
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : 'bg-red-50 text-red-600 border-red-200'">
+
+                <i class="fa-solid"
+                   [ngClass]="est.presente
+                     ? 'fa-circle-check'
+                     : 'fa-circle-xmark'"></i>
+
+                {{ est.presente ? 'Presente' : 'Ausente' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- =========================================================
+     MODAL RF-004 - EVALUACIÓN DIAGNÓSTICA DEL ESTUDIANTE
+     ========================================================= -->
+<div *ngIf="modalDiagnostico && evaluacionDiagnosticaSeleccionada"
+     class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-sm">
+
+  <div class="w-full max-w-3xl max-h-[92vh] overflow-hidden bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col">
+
+    <div class="px-5 py-4 border-b border-slate-200 flex items-start justify-between gap-4 bg-slate-50/70">
+
+      <div class="min-w-0">
+
+        <div class="flex items-center gap-2 flex-wrap">
+
+          <span class="text-[11px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full"
+                [ngClass]="evaluacionDiagnosticaSeleccionada.tipoEvaluacion === 'Cuestionario'
+                  ? 'bg-violet-100 text-violet-700'
+                  : 'bg-blue-100 text-blue-700'">
+
+            {{ evaluacionDiagnosticaSeleccionada.tipoEvaluacion }}
+          </span>
+
+          <span class="text-[11px] font-bold px-2.5 py-1 rounded-full border"
+                [ngClass]="{
+                  'bg-amber-50 text-amber-700 border-amber-200': evaluacionDiagnosticaSeleccionada.estadoEntrega === 'Pendiente',
+                  'bg-blue-50 text-blue-700 border-blue-200': evaluacionDiagnosticaSeleccionada.estadoEntrega === 'Entregado',
+                  'bg-emerald-50 text-emerald-700 border-emerald-200': evaluacionDiagnosticaSeleccionada.estadoEntrega === 'Calificado'
+                }">
+
+            {{ textoEstadoEntregaDiagnostico(evaluacionDiagnosticaSeleccionada) }}
+          </span>
+        </div>
+
+        <h3 class="text-lg font-bold text-slate-900 mt-2">
+          {{ evaluacionDiagnosticaSeleccionada.nombre }}
+        </h3>
+
+        <p class="text-xs text-slate-500 mt-1">
+          {{ formatearFechaHoraDiagnostico(evaluacionDiagnosticaSeleccionada.fechaInicio) }}
+          —
+          {{ formatearFechaHoraDiagnostico(evaluacionDiagnosticaSeleccionada.fechaFin) }}
+        </p>
+      </div>
+
+      <button type="button"
+              (click)="cerrarEvaluacionDiagnostica()"
+              [disabled]="guardandoDiagnostico"
+              class="w-9 h-9 rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-slate-900 hover:bg-slate-100 disabled:opacity-50 flex items-center justify-center shrink-0">
+
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div class="p-5 md:p-6 overflow-y-auto space-y-5">
+
+      <div *ngIf="evaluacionDiagnosticaSeleccionada.instrucciones"
+           class="p-4 rounded-xl bg-indigo-50/60 border border-indigo-100">
+
+        <p class="text-xs font-bold text-indigo-900 mb-1">
+          Instrucciones
+        </p>
+
+        <p class="text-sm text-slate-700 whitespace-pre-line">
+          {{ evaluacionDiagnosticaSeleccionada.instrucciones }}
+        </p>
+      </div>
+
+      <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-start gap-2">
+        <i class="fa-solid fa-circle-info text-indigo-500 mt-0.5"></i>
+
+        <span>
+          La evaluación diagnóstica se califica sobre 10 y no modifica tu promedio académico.
+        </span>
+      </div>
+
+      <div *ngIf="errorDiagnostico"
+           class="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm flex items-start gap-2">
+
+        <i class="fa-solid fa-circle-exclamation mt-0.5"></i>
+        <span>{{ errorDiagnostico }}</span>
+      </div>
+
+      <div *ngIf="mensajeDiagnostico"
+           class="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm flex items-start gap-2">
+
+        <i class="fa-solid fa-circle-check mt-0.5"></i>
+        <span>{{ mensajeDiagnostico }}</span>
+      </div>
+
+      <div *ngIf="evaluacionDiagnosticaSeleccionada.archivoDocenteUrl"
+           class="flex items-center justify-between gap-3 p-4 rounded-xl border border-slate-200">
+
+        <div class="flex items-center gap-3 min-w-0">
+
+          <div class="w-9 h-9 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center">
+            <i class="fa-solid fa-paperclip"></i>
+          </div>
+
+          <div>
+            <p class="text-xs font-bold text-slate-800">
+              Archivo adjunto del docente
+            </p>
+
+            <p class="text-[11px] text-slate-400">
+              Material de apoyo de la evaluación.
+            </p>
+          </div>
+        </div>
+
+        <button type="button"
+                (click)="abrirArchivoDiagnostico(evaluacionDiagnosticaSeleccionada.archivoDocenteUrl)"
+                class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold">
+
+          <i class="fa-solid fa-arrow-up-right-from-square mr-1"></i>
+          Abrir
+        </button>
+      </div>
+
+      <!-- Archivo -->
+      <div *ngIf="evaluacionDiagnosticaSeleccionada.tipoEvaluacion === 'Archivo'"
+           class="space-y-4">
+
+        <div *ngIf="evaluacionDiagnosticaSeleccionada.puedeRealizar"
+             class="border border-blue-200 bg-blue-50/30 rounded-2xl p-5 space-y-4">
+
+          <div>
+            <h4 class="text-sm font-bold text-slate-900">
+              Entregar archivo
+            </h4>
+
+            <p class="text-xs text-slate-500 mt-1">
+              Formatos permitidos: PDF, Word, ZIP, PNG, JPG y JPEG.
+            </p>
+          </div>
+
+          <label class="block cursor-pointer">
+
+            <div class="border-2 border-dashed border-slate-300 hover:border-blue-400 rounded-xl p-6 text-center bg-white transition-colors">
+
+              <i class="fa-solid fa-cloud-arrow-up text-2xl text-blue-500"></i>
+
+              <p class="text-sm font-semibold text-slate-700 mt-2">
+                {{ archivoDiagnostico
+                ? archivoDiagnostico.name
+                : 'Seleccionar archivo' }}
+              </p>
+
+              <p class="text-[11px] text-slate-400 mt-1">
+                Haz clic para buscar el archivo en tu equipo.
+              </p>
+            </div>
+
+            <input type="file"
+                   class="hidden"
+                   accept=".pdf,.doc,.docx,.zip,.png,.jpg,.jpeg"
+                   (change)="onArchivoDiagnosticoChange($event)" />
+          </label>
+
+          <div *ngIf="archivoDiagnostico"
+               class="flex items-center justify-between gap-3 p-3 rounded-xl bg-white border border-slate-200">
+
+            <div class="min-w-0">
+
+              <p class="text-xs font-bold text-slate-800 truncate">
+                {{ archivoDiagnostico.name }}
+              </p>
+
+              <p class="text-[11px] text-slate-400">
+                {{ Math.round(archivoDiagnostico.size / 1024) }} KB
+              </p>
+            </div>
+
+            <button type="button"
+                    (click)="quitarArchivoDiagnostico()"
+                    class="text-xs font-semibold text-red-600 hover:underline">
+              Quitar
+            </button>
+          </div>
+
+          <button type="button"
+                  (click)="entregarArchivoDiagnostico()"
+                  [disabled]="guardandoDiagnostico || !archivoDiagnostico"
+                  class="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-xl text-sm font-bold transition-colors">
+
+            <i class="fa-solid mr-2"
+               [ngClass]="guardandoDiagnostico
+                 ? 'fa-spinner fa-spin'
+                 : 'fa-paper-plane'"></i>
+
+            {{ guardandoDiagnostico
+            ? 'Entregando...'
+            : 'Entregar evaluación' }}
+          </button>
+        </div>
+
+        <div *ngIf="evaluacionDiagnosticaSeleccionada.archivoEntregaUrl"
+             class="p-4 rounded-xl border border-blue-200 bg-blue-50/50 flex items-center justify-between gap-3">
+
+          <div>
+            <p class="text-xs font-bold text-blue-900">
+              Archivo entregado
+            </p>
+
+            <p class="text-[11px] text-blue-700 mt-1">
+              Entregado:
+              {{ formatearFechaHoraDiagnostico(
+              evaluacionDiagnosticaSeleccionada.fechaEntrega
+            ) }}
+            </p>
+          </div>
+
+          <button type="button"
+                  (click)="abrirArchivoDiagnostico(evaluacionDiagnosticaSeleccionada.archivoEntregaUrl)"
+                  class="px-3 py-2 bg-white border border-blue-200 rounded-xl text-xs font-semibold text-blue-700 hover:bg-blue-50">
+
+            Ver archivo
+          </button>
+        </div>
+      </div>
+
+      <!-- Cuestionario -->
+      <div *ngIf="evaluacionDiagnosticaSeleccionada.tipoEvaluacion === 'Cuestionario'"
+           class="space-y-4">
+
+        <div *ngIf="preguntasDiagnostico.length === 0"
+             class="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+
+          No se encontraron preguntas configuradas para este cuestionario.
+        </div>
+
+        <div *ngFor="let pregunta of preguntasDiagnostico; let i = index"
+             class="p-4 rounded-xl border border-slate-200 bg-white">
+
+          <label class="block text-sm font-bold text-slate-800 mb-2">
+            {{ i + 1 }}. {{ pregunta.pregunta }}
+          </label>
+
+          <textarea [(ngModel)]="respuestasDiagnostico[pregunta.id]"
+                    [disabled]="!evaluacionDiagnosticaSeleccionada.puedeRealizar"
+                    rows="3"
+                    placeholder="Escribe tu respuesta..."
+                    class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-200 disabled:bg-slate-50 disabled:text-slate-600 resize-y"></textarea>
+        </div>
+
+        <button *ngIf="evaluacionDiagnosticaSeleccionada.puedeRealizar && preguntasDiagnostico.length > 0"
+                type="button"
+                (click)="entregarCuestionarioDiagnostico()"
+                [disabled]="guardandoDiagnostico"
+                class="w-full px-4 py-2.5 bg-violet-600 hover:bg-violet-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-xl text-sm font-bold transition-colors">
+
+          <i class="fa-solid mr-2"
+             [ngClass]="guardandoDiagnostico
+               ? 'fa-spinner fa-spin'
+               : 'fa-paper-plane'"></i>
+
+          {{ guardandoDiagnostico
+          ? 'Entregando...'
+          : 'Entregar cuestionario' }}
+        </button>
+      </div>
+
+      <!-- Resultado -->
+      <div *ngIf="evaluacionDiagnosticaSeleccionada.estadoEntrega === 'Calificado'"
+           class="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-5">
+
+        <div class="flex items-center justify-between gap-4">
+
+          <div>
+            <p class="text-xs font-bold uppercase tracking-wide text-emerald-600">
+              Resultado
+            </p>
+
+            <h4 class="text-base font-bold text-emerald-900 mt-1">
+              Evaluación calificada
+            </h4>
+          </div>
+
+          <div class="text-right">
+
+            <span class="text-3xl font-black text-emerald-700">
+              {{ evaluacionDiagnosticaSeleccionada.calificacion }}
+            </span>
+
+            <span class="text-sm font-bold text-emerald-600">
+              / 10
+            </span>
+          </div>
+        </div>
+
+        <div *ngIf="evaluacionDiagnosticaSeleccionada.observacion"
+             class="mt-4 pt-4 border-t border-emerald-200">
+
+          <p class="text-xs font-bold text-emerald-800">
+            Observación del docente
+          </p>
+
+          <p class="text-sm text-emerald-900 mt-1 whitespace-pre-line">
+            {{ evaluacionDiagnosticaSeleccionada.observacion }}
+          </p>
+        </div>
+      </div>
+
+      <div *ngIf="!evaluacionDiagnosticaSeleccionada.puedeRealizar &&
+                  evaluacionDiagnosticaSeleccionada.estadoEntrega !== 'Calificado'"
+           class="p-4 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-600">
+
+        <i class="fa-solid fa-lock mr-2 text-slate-400"></i>
+
+        Esta evaluación no está disponible para una nueva entrega en este momento.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =========================================================
+     RF-005 - MODAL DE DETALLE DE REPROGRAMACIÓN
+     ========================================================= -->
+<div *ngIf="modalActualizacionCronograma && actualizacionCronogramaSeleccionada"
+     class="fixed inset-0 z-50 bg-slate-950/45 flex items-center justify-center p-4"
+     (click)="cerrarDetalleActualizacionCronograma()">
+
+  <div class="w-full max-w-xl rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden"
+       (click)="$event.stopPropagation()">
+
+    <div class="px-5 py-4 border-b border-slate-200 flex items-start justify-between gap-4">
+
+      <div>
+        <p class="text-[11px] font-bold uppercase tracking-wide text-amber-600">
+          RF-005
+        </p>
+
+        <h2 class="text-lg font-bold text-slate-900">
+          Cronograma actualizado
+        </h2>
+
+        <p class="text-xs text-slate-500 mt-1">
+          {{ materia.nombre }}
+        </p>
+      </div>
+
+      <button type="button"
+              (click)="cerrarDetalleActualizacionCronograma()"
+              class="w-9 h-9 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-100"
+              aria-label="Cerrar detalle">
+
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div class="p-5 space-y-4">
+
+      <div>
+        <p class="text-[11px] font-bold uppercase tracking-wide text-slate-400">
+          Actividad
+        </p>
+
+        <p class="text-sm font-semibold text-slate-900 mt-1">
+          {{ actualizacionCronogramaSeleccionada.actividad }}
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+
+          <p class="text-[11px] font-bold uppercase tracking-wide text-slate-400">
+            Fecha anterior
+          </p>
+
+          <p class="text-sm font-semibold text-slate-700 mt-1">
+            {{ actualizacionCronogramaSeleccionada.fechaAnterior | date:'dd/MM/yyyy' }}
+          </p>
+        </div>
+
+        <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+
+          <p class="text-[11px] font-bold uppercase tracking-wide text-emerald-600">
+            Nueva fecha
+          </p>
+
+          <p class="text-sm font-bold text-emerald-800 mt-1">
+            {{ actualizacionCronogramaSeleccionada.fechaNueva | date:'dd/MM/yyyy' }}
+          </p>
+        </div>
+      </div>
+
+      <div class="rounded-xl border border-slate-200 p-3">
+
+        <p class="text-[11px] font-bold uppercase tracking-wide text-slate-400">
+          Motivo del cambio
+        </p>
+
+        <p class="text-sm text-slate-700 mt-1 whitespace-pre-line">
+          {{ actualizacionCronogramaSeleccionada.observacion || 'Sin observación registrada.' }}
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2 text-xs text-slate-500">
+
+        <i class="fa-regular fa-clock"></i>
+
+        <span>
+          Notificado el
+          {{ actualizacionCronogramaSeleccionada.fechaNotificacion | date:'dd/MM/yyyy HH:mm' }}
+        </span>
+      </div>
+
+      <div *ngIf="actualizacionesCronograma.length > 1"
+           class="pt-3 border-t border-slate-200">
+
+        <p class="text-xs font-bold text-slate-700 mb-2">
+          Historial reciente de cambios
+        </p>
+
+        <div class="space-y-2 max-h-44 overflow-y-auto pr-1">
+
+          <button *ngFor="let cambio of actualizacionesCronograma"
+                  type="button"
+                  (click)="actualizacionCronogramaSeleccionada = cambio"
+                  class="w-full text-left rounded-xl border px-3 py-2 hover:bg-slate-50 transition-colors"
+                  [ngClass]="actualizacionCronogramaSeleccionada.id === cambio.id
+                    ? 'bg-amber-50 border-amber-200'
+                    : 'bg-white border-slate-200'">
+
+            <div class="flex items-center justify-between gap-3">
+
+              <span class="text-xs font-semibold text-slate-800 truncate">
+                {{ cambio.actividad }}
+              </span>
+
+              <span class="text-[11px] text-slate-500 shrink-0">
+                {{ cambio.fechaNueva | date:'dd/MM/yyyy' }}
+              </span>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="px-5 py-4 border-t border-slate-200 bg-slate-50 flex justify-end">
+
+      <button type="button"
+              (click)="cerrarDetalleActualizacionCronograma()"
+              class="px-4 py-2 text-xs font-bold rounded-xl bg-slate-900 text-white hover:bg-slate-800">
+
+        Cerrar
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,4 @@
+/* Estilos específicos para sidebar */
+aside {
+  transition: transform 0.2s ease-in-out;
+}

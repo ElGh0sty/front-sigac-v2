@@ -1,0 +1,298 @@
+<div class="max-w-6xl mx-auto p-4 md:p-8 lg:p-10 space-y-8" id="contenedor-postulacion-ayudantia">
+  
+  <!-- CABECERA DE LA CONVOCATORIA -->
+  <div class="bg-white border border-slate-200 rounded-3xl p-6 md:p-10 shadow-xs relative overflow-hidden" id="hero-convocatoria-ayudantias">
+    <div class="absolute -right-16 -top-16 w-80 h-80 bg-emerald-50/50 rounded-full blur-2xl pointer-events-none"></div>
+
+    <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div class="space-y-2">
+        <div class="flex items-center gap-2">
+          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <i class="fa-solid fa-bullhorn text-[11px]"></i> Convocatoria Oficial Abierta
+          </span>
+          <span class="text-xs text-slate-400 font-medium">Periodo Lectivo 2026-2</span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+          Postulación a Ayudantías de Cátedra
+        </h1>
+        <p class="text-sm text-slate-500 max-w-2xl leading-relaxed">
+          Postúlate a las cátedras en las que cumplas con los requisitos académicos establecidos por el Reglamento de Régimen Académico y la Coordinación de Carrera.
+        </p>
+      </div>
+
+      <!-- Resumen de Requisitos Generales -->
+      <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl shrink-0 space-y-2 text-xs text-slate-600 min-w-[260px]">
+        <span class="font-bold text-slate-900 block text-xs uppercase tracking-wider">Tu Validación de Requisitos:</span>
+        <div class="flex items-center justify-between">
+          <span>Estudiante regular:</span>
+          <span class="font-bold text-emerald-700 flex items-center gap-1"><i class="fa-solid fa-check"></i> Cumplido</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span>Promedio acumulado:</span>
+          <span class="font-bold text-emerald-700 flex items-center gap-1"><i class="fa-solid fa-check"></i> {{ promedioAcumulado }} / 10.0</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span>Sanciones disciplinarias:</span>
+          <span class="font-bold text-emerald-700 flex items-center gap-1"><i class="fa-solid fa-check"></i> Ninguna</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ALERTA DE MENSAJES -->
+  <div *ngIf="successMessage" class="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-medium rounded-2xl flex items-center gap-3 animate-fade-in shadow-xs" id="alert-postulacion-exito">
+    <i class="fa-solid fa-circle-check text-emerald-600 text-lg shrink-0"></i>
+    <span>{{ successMessage }}</span>
+  </div>
+
+  <div *ngIf="errorMessage" class="p-4 bg-red-50 border border-red-200 text-red-800 text-sm font-medium rounded-2xl flex items-center gap-3 animate-fade-in shadow-xs" id="alert-postulacion-error">
+    <i class="fa-solid fa-circle-exclamation text-red-600 text-lg shrink-0"></i>
+    <span>{{ errorMessage }}</span>
+  </div>
+
+  <!-- CATÁLOGO DE CÁTEDRAS DISPONIBLES CON VALIDACIÓN INDIVIDUAL -->
+  <div class="space-y-4" id="seccion-catedras-postulacion">
+    <div class="flex items-center justify-between">
+      <div>
+        <h2 class="text-xl font-bold text-slate-900">Cátedras con Convocatoria</h2>
+        <p class="text-xs sm:text-sm text-slate-500 mt-0.5">El sistema valida automáticamente tu calificación en cada materia antes de habilitar la postulación.</p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      
+      <div *ngFor="let catedra of convocatorias"
+           class="bg-white border rounded-3xl p-6 shadow-xs flex flex-col justify-between space-y-5 transition-all"
+           [ngClass]="catedra.cumpleRequisitos ? 'border-slate-200 hover:border-accent/50 hover:shadow-md' : 'border-slate-200/60 bg-slate-50/50 opacity-90'">
+        
+        <div class="space-y-4">
+          <!-- Cabecera de la Cátedra -->
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-mono font-bold px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700">
+                  {{ catedra.codigo }}
+                </span>
+                <span class="text-xs text-slate-400 font-medium">
+                  {{ catedra.semestre }}
+                </span>
+              </div>
+              <h3 class="text-base sm:text-lg font-bold text-slate-900 mt-2 leading-snug">
+                {{ catedra.nombre }}
+              </h3>
+              <p class="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
+                <i class="fa-solid fa-user-tie text-slate-400"></i>
+                Docente: <span class="font-medium text-slate-700">{{ catedra.docente }}</span>
+              </p>
+            </div>
+
+            <!-- Badge de Estado de Requisitos -->
+            <div>
+              <span *ngIf="catedra.yaPostulado" class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                <i class="fa-solid fa-clock"></i> Postulado
+              </span>
+              <span *ngIf="!catedra.yaPostulado && catedra.cumpleRequisitos" class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <i class="fa-solid fa-circle-check"></i> Cumple Requisitos
+              </span>
+              <span *ngIf="!catedra.cumpleRequisitos" class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                <i class="fa-solid fa-ban"></i> No Cumple
+              </span>
+            </div>
+          </div>
+
+          <!-- Comparativa de Calificaciones (Requisito vs Expediente) -->
+          <div class="p-4 rounded-2xl border text-xs space-y-2"
+               [ngClass]="catedra.cumpleRequisitos ? 'bg-slate-50/80 border-slate-200' : 'bg-amber-50/40 border-amber-200/80'">
+            <div class="flex items-center justify-between">
+              <span class="text-slate-500">Nota mínima requerida por la cátedra:</span>
+              <span class="font-bold text-slate-800">{{ catedra.minimoNota.toFixed(2) }} / 10.0</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-500">Tu calificación obtenida en la materia:</span>
+              <span class="font-bold text-sm"
+                    [ngClass]="catedra.notaObtenidaEstudiante >= catedra.minimoNota ? 'text-emerald-700' : 'text-red-600'">
+                {{ catedra.notaObtenidaEstudiante.toFixed(2) }} / 10.0
+              </span>
+            </div>
+
+            <!-- Detalle explicativo si no cumple -->
+            <div *ngIf="!catedra.cumpleRequisitos && catedra.motivoInvalidez" class="pt-2 border-t border-amber-200/60 text-amber-900 text-[11px] leading-relaxed flex items-start gap-1.5">
+              <i class="fa-solid fa-triangle-exclamation text-amber-600 shrink-0 mt-0.5"></i>
+              <span>{{ catedra.motivoInvalidez }}</span>
+            </div>
+          </div>
+
+          <!-- Información adicional de la ayudantía -->
+          <div class="flex items-center justify-between text-xs text-slate-500 pt-1">
+            <span class="flex items-center gap-1">
+              <i class="fa-solid fa-clock text-slate-400"></i> {{ catedra.horasAyudantia }} Horas semestrales
+            </span>
+            <span class="flex items-center gap-1">
+              <i class="fa-solid fa-users text-slate-400"></i> {{ catedra.cuposDisponibles }} Plazas disponibles
+            </span>
+          </div>
+        </div>
+
+        <!-- Botón de Postulación Condicional -->
+        <div class="pt-2">
+          <!-- Si ya postuló -->
+          <div *ngIf="catedra.yaPostulado" class="w-full py-3 px-4 bg-blue-50 text-blue-700 font-semibold text-xs rounded-xl border border-blue-200 text-center flex items-center justify-center gap-2">
+            <i class="fa-solid fa-clipboard-check"></i>
+            <span>Tu postulación está siendo revisada por Coordinación</span>
+          </div>
+
+          <!-- Si cumple requisitos y no ha postulado -->
+          <button *ngIf="!catedra.yaPostulado && catedra.cumpleRequisitos"
+                  type="button"
+                  (click)="abrirModalPostulacion(catedra)"
+                  class="w-full py-3 px-4 bg-accent hover:bg-accent-dim text-white font-bold text-xs rounded-xl shadow-md shadow-accent/20 transition-all flex items-center justify-center gap-2 cursor-pointer">
+            <i class="fa-solid fa-file-signature"></i>
+            <span>Postularme</span>
+          </button>
+
+          <!-- Si NO cumple requisitos: la opción NO está disponible -->
+          <div *ngIf="!catedra.cumpleRequisitos" class="w-full py-3 px-4 bg-slate-100 text-slate-400 font-semibold text-xs rounded-xl border border-slate-200 text-center flex items-center justify-center gap-2 cursor-not-allowed select-none">
+            <i class="fa-solid fa-lock text-slate-400"></i>
+            <span>Opción de postulación no habilitada (Requisitos pendientes)</span>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MIS POSTULACIONES REGISTRADAS -->
+  <div class="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 shadow-xs space-y-4" id="seccion-mis-postulaciones">
+    <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+      <div>
+        <h2 class="text-lg font-bold text-slate-900">Mis Postulaciones Registradas</h2>
+        <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Seguimiento del estado de tus solicitudes enviadas.</p>
+      </div>
+      <span class="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg">
+        {{ historial.length }} solicitudes
+      </span>
+    </div>
+
+    <div *ngIf="historial.length === 0" class="text-center py-10 text-slate-400 text-sm">
+      <i class="fa-regular fa-folder-open text-3xl mb-2 block"></i>
+      Aún no has registrado ninguna postulación para este periodo.
+    </div>
+
+    <div *ngIf="historial.length > 0" class="divide-y divide-slate-100">
+      <div *ngFor="let h of historial" class="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="space-y-1">
+          <div class="flex items-center gap-2">
+            <h3 class="text-sm font-bold text-slate-900">{{ h.nombreCatedra }}</h3>
+            <span class="text-xs text-slate-400 font-mono">{{ h.semestreCatedra }}</span>
+          </div>
+          <p class="text-xs text-slate-500">
+            Docente Titular: {{ h.docenteCatedra || 'Por asignar' }}
+          </p>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <span class="px-3 py-1 text-xs font-bold rounded-full flex items-center gap-1.5"
+                [ngClass]="{
+                  'bg-emerald-50 text-emerald-700 border border-emerald-200': h.estadoAyudantia === 'Aprobada' || h.estadoAyudantia === 'Asignada',
+                  'bg-blue-50 text-blue-700 border border-blue-200': h.estadoAyudantia === 'Pendiente' || h.estadoAyudantia === 'En Revisión',
+                  'bg-amber-50 text-amber-700 border border-amber-200': h.estadoAyudantia === 'En Evaluación',
+                  'bg-red-50 text-red-700 border border-red-200': h.estadoAyudantia === 'Rechazada'
+                }">
+            <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+            {{ h.estadoAyudantia }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE CONFIRMACIÓN Y POSTULACIÓN -->
+  <div *ngIf="mostrarModalPostular && catedraSeleccionada"
+       class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
+       id="modal-confirmar-postulacion">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6">
+      
+      <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+        <div>
+          <span class="text-[11px] font-bold uppercase tracking-wider text-accent bg-accent/10 px-2.5 py-0.5 rounded-md">
+            Confirmación de Postulación
+          </span>
+          <h3 class="text-lg font-bold text-slate-900 mt-1">{{ catedraSeleccionada.nombre }}</h3>
+        </div>
+        <button type="button"
+                (click)="cerrarModal()"
+                class="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center transition-colors">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4">
+        
+        <!-- Ficha de Validación -->
+        <div class="p-4 bg-emerald-50/70 border border-emerald-200 rounded-2xl text-xs space-y-2 text-emerald-950">
+          <div class="font-bold flex items-center gap-1.5 text-emerald-800">
+            <i class="fa-solid fa-circle-check"></i> Requisitos Validados por el Sistema
+          </div>
+          <div class="text-slate-600 space-y-1">
+            <p>• Calificación obtenida en la materia: <strong>{{ catedraSeleccionada.notaObtenidaEstudiante.toFixed(2) }}/10</strong> (Mínimo exigido: {{ catedraSeleccionada.minimoNota.toFixed(2) }})</p>
+            <p>• Promedio general acumulado: <strong>{{ promedioAcumulado }}/10</strong> (Mínimo: 8.0)</p>
+            <p>• Condición: <strong>Estudiante Regular sin sanciones</strong></p>
+          </div>
+        </div>
+
+        <!-- Disponibilidad -->
+        <div class="space-y-1.5">
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">
+            Disponibilidad Horaria para Ayudantías
+          </label>
+          <select [(ngModel)]="disponibilidadHoraria"
+                  class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none">
+            <option value="Mañana (08:00 - 12:00)">Jornada Matutina (08:00 - 12:00)</option>
+            <option value="Tarde (14:00 - 18:00)">Jornada Vespertina (14:00 - 18:00)</option>
+            <option value="Flexible / Fines de Semana">Horario Flexible / Tutorías Virtuales</option>
+          </select>
+        </div>
+
+        <!-- Breve justificación -->
+        <div class="space-y-1.5">
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">
+            Breve Justificación o Experiencia Académica
+          </label>
+          <textarea rows="3"
+                    [(ngModel)]="cartaMotivacion"
+                    class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none resize-none leading-relaxed"></textarea>
+        </div>
+
+        <!-- Declaración Jurada -->
+        <label class="flex items-start gap-2.5 cursor-pointer text-xs text-slate-700 p-3 bg-slate-50 rounded-xl border border-slate-200">
+          <input type="checkbox"
+                 [(ngModel)]="aceptaDeclaracionJurada"
+                 class="w-4 h-4 text-accent rounded border-slate-300 focus:ring-accent/30 mt-0.5" />
+          <span>
+            Declaro bajo juramento que los datos de mi expediente son auténticos y me comprometo a cumplir con las horas lectivas estipuladas.
+          </span>
+        </label>
+
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-2 border-t border-slate-100">
+        <button type="button"
+                (click)="cerrarModal()"
+                class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors">
+          Cancelar
+        </button>
+        <button type="button"
+                [disabled]="!aceptaDeclaracionJurada || isLoading"
+                (click)="confirmarPostulacion()"
+                class="px-5 py-2.5 bg-accent hover:bg-accent-dim text-white text-xs font-bold rounded-xl shadow-md shadow-accent/20 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer">
+          <i class="fa-solid fa-paper-plane" *ngIf="!isLoading"></i>
+          <i class="fa-solid fa-circle-notch fa-spin" *ngIf="isLoading"></i>
+          <span>{{ isLoading ? 'Enviando...' : 'Confirmar Postulación' }}</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+</div>
