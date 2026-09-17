@@ -434,13 +434,11 @@ export class AyudantiasDashboardComponent implements OnInit, OnDestroy {
 
     const apiBase = getApiBase();
 
-    // Intentar registrar el estudiante en los posibles endpoints de usuario/estudiante del backend
-    const registrarEstudiante$ = this.http.post<any>(`${apiBase}/api/Estudiantes`, payloadEstudiante).pipe(
-      catchError(() => this.http.post<any>(`${apiBase}/api/Estudiante`, payloadEstudiante)),
+    // Registrar el usuario en la BD de Supabase a través de Login/register o Usuarios
+    const registrarEstudiante$ = this.http.post<any>(`${apiBase}/api/Login/register`, payloadEstudiante).pipe(
       catchError(() => this.http.post<any>(`${apiBase}/api/Usuarios`, payloadEstudiante)),
-      catchError(() => this.http.post<any>(`${apiBase}/api/Login/register`, payloadEstudiante)),
       catchError((err) => {
-        console.warn('Registro preliminar de estudiante falló o el estudiante ya existe en la BD:', err);
+        console.warn('Aviso de registro de estudiante (continuando con postulación directa):', err);
         return of(null);
       })
     );

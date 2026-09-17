@@ -189,11 +189,9 @@ export class AdminDocenteService {
    * Obtiene los docentes vinculados a la coordinacion/carrera del coordinador en sesion.
    */
   getDocentesCoordinados(carreraOCoordinacion?: string | number): Observable<DocenteItemDto[]> {
-    const q = carreraOCoordinacion ? ('?coordinacion=' + encodeURIComponent(carreraOCoordinacion)) : '';
-    return this.http.get<any[]>(this.baseUrl + '/api/Coordinador/docentes' + q).pipe(
-      catchError(() => this.getDocentes()),
-      map((docs: any) => {
-        const list: DocenteItemDto[] = Array.isArray(docs) ? docs : (docs?.data || docs?.docentes || []);
+    return this.getDocentes().pipe(
+      map((docs: DocenteItemDto[]) => {
+        const list: DocenteItemDto[] = Array.isArray(docs) ? docs : [];
         if (!carreraOCoordinacion || list.length === 0) return list;
         const filtro = String(carreraOCoordinacion).trim().toLowerCase();
         return list.filter(d => {
@@ -201,8 +199,7 @@ export class AdminDocenteService {
           const carr = (d.carrera || '').toLowerCase();
           return !filtro || dep.includes(filtro) || carr.includes(filtro) || filtro.includes(dep) || filtro.includes(carr);
         });
-      }),
-      catchError(() => this.getDocentes())
+      })
     );
   }
 }

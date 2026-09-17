@@ -238,44 +238,30 @@ export class EstudianteService {
   }
 
   postularAyudantia(dto: PostulacionAyudantiaDto): Observable<any> {
+    const rawDto = dto as any;
+    const matId = rawDto.materiaId || rawDto.catedraId || 0;
     const payload = {
       AyudantiaId: dto.ayudantiaId || 0,
-      EstudianteId: dto.estudianteId || 1,
+      ayudantiaId: dto.ayudantiaId || 0,
+      EstudianteId: dto.estudianteId || 0,
+      estudianteId: dto.estudianteId || 0,
+      PostulanteId: dto.estudianteId || 0,
+      postulanteId: dto.estudianteId || 0,
       CatedraId: dto.catedraId,
+      catedraId: dto.catedraId,
+      MateriaId: matId,
+      materiaId: matId,
       PromedioEstudiante: dto.promedioEstudiante || 8.92,
       NotaEstudianteEnCatedra: dto.notaEstudianteEnCatedra || 9.0,
       PorcentajeMallaAprobada: dto.porcentajeMallaAprobada || 65.0,
       DisponibilidadHoraria: dto.disponibilidadHoraria || 'Completa',
-      MotivoPostulacion: dto.motivoPostulacion || '',
-      TemaSilaboPropuesto: dto.temaSilaboPropuesto || ''
+      MotivoPostulacion: dto.motivoPostulacion || 'Postulación a ayudantía',
+      TemaSilaboPropuesto: dto.temaSilaboPropuesto || 'Apoyo a la cátedra'
     };
 
-    return this.http.post(`${this.apiUrl}/postular`, payload).pipe(
-      tap(() => {
-        const actual = this.historialSubject.value;
-        const nueva: HistorialAyudantiaDto = {
-          ayudantiaId: Math.floor(Math.random() * 1000) + 200,
-          estadoAyudantia: 'En Revisión',
-          catedraId: dto.catedraId,
-          nombreCatedra: dto.nombreCatedra || 'Cátedra Seleccionada',
-          semestreCatedra: 'Semestre 2026-1',
-          docenteCatedra: 'Docente Responsable de Cátedra'
-        };
-        this.historialSubject.next([...actual, nueva]);
-      }),
-      catchError(() => {
-        const actual = this.historialSubject.value;
-        const nueva: HistorialAyudantiaDto = {
-          ayudantiaId: Math.floor(Math.random() * 1000) + 200,
-          estadoAyudantia: 'En Revisión',
-          catedraId: dto.catedraId,
-          nombreCatedra: dto.nombreCatedra || 'Cátedra Seleccionada',
-          semestreCatedra: 'Semestre 2026-1',
-          docenteCatedra: 'Docente Responsable de Cátedra'
-        };
-        this.historialSubject.next([...actual, nueva]);
-        return of({ success: true, message: 'Postulación registrada en el cliente' });
-      })
+    return this.http.post(`${this.apiUrl}/postulaciones`, payload).pipe(
+      catchError(() => this.http.post(`${this.apiUrl}/ayudantias/postulaciones`, payload)),
+      catchError(() => this.http.post(`${getApiBase()}/api/estudiantes/postulaciones`, payload))
     );
   }
 

@@ -203,19 +203,15 @@ export class CoordinadorService {
 
   crearSolicitudAyudantia(body: any): Observable<any> {
     const base = getApiBase();
-    const urlCoordinador = `${this.apiUrl}/ayudantias/postular`;
-    const urlEstudiantes = `${base}/api/Estudiantes/postular`;
-    const urlEstudiante = `${base}/api/Estudiante/postular`;
-    const urlAyudantiasPostular = `${base}/api/ayudantias/postular`;
-    const urlAyudantias = `${base}/api/Ayudantias`;
-    const urlSolicitudes = `${base}/api/Solicitudes`;
+    const urlPostulaciones1 = `${base}/api/Estudiante/postulaciones`;
+    const urlPostulaciones2 = `${base}/api/estudiantes/postulaciones`;
+    const urlPostulaciones3 = `${base}/api/Estudiante/ayudantias/postulaciones`;
+    const urlPostulaciones4 = `${base}/api/estudiantes/ayudantias/postulaciones`;
 
-    return this.http.post(urlCoordinador, body).pipe(
-      catchError(() => this.http.post(urlEstudiantes, body)),
-      catchError(() => this.http.post(urlEstudiante, body)),
-      catchError(() => this.http.post(urlAyudantiasPostular, body)),
-      catchError(() => this.http.post(urlAyudantias, body)),
-      catchError((err) => this.http.post(urlSolicitudes, body))
+    return this.http.post(urlPostulaciones1, body).pipe(
+      catchError(() => this.http.post(urlPostulaciones2, body)),
+      catchError(() => this.http.post(urlPostulaciones3, body)),
+      catchError((err) => this.http.post(urlPostulaciones4, body))
     );
   }
 
