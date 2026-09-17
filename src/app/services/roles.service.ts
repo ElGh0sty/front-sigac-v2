@@ -4,7 +4,7 @@ import { Observable, catchError, map, throwError } from 'rxjs';
 import { getApiBase } from '../api';
 import { AuthService } from './auth.service';
 
-export type RolSistema = 'Administrador' | 'Decano' | 'Coordinador' | 'Docente' | 'Estudiante';
+export type RolSistema = 'Administrador' | 'Decano' | 'Coordinador' | 'Docente' | 'Ayudante' | 'Estudiante';
 
 export interface JerarquiaRolInfo {
   rol: RolSistema;
@@ -77,6 +77,12 @@ export class RolesService {
       rol: 'Docente',
       nivel: 2,
       descripcion: 'Docente titular y miembros expertos evaluadores de cátedras.',
+      puedeGestionar: ['Ayudante', 'Estudiante']
+    },
+    Ayudante: {
+      rol: 'Ayudante',
+      nivel: 1.5,
+      descripcion: 'Ayudante de cátedra oficial, colabora en actividades pedagógicas, bitácoras y horarios.',
       puedeGestionar: ['Estudiante']
     },
     Estudiante: {
@@ -135,6 +141,6 @@ export class RolesService {
    * Lista ordenada de roles según su jerarquía institucional
    */
   getListaRoles(): RolSistema[] {
-    return ['Administrador', 'Decano', 'Coordinador', 'Docente', 'Estudiante'];
+    return ['Administrador', 'Decano', 'Coordinador', 'Docente', 'Ayudante', 'Estudiante'];
   }
 }

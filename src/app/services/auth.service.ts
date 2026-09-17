@@ -1,4 +1,4 @@
-﻿import { Injectable } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of, throwError } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
@@ -76,11 +76,7 @@ export class AuthService {
     }
 
     const rolesArray: string[] = res?.roles || res?.Roles || (res?.rol ? [res.rol] : res?.Rol ? [res.Rol] : []);
-    const rolPrincipal = res?.rol || res?.Rol || (rolesArray.length > 0 ? rolesArray[0] : 'Estudiante');
-    localStorage.setItem('rol', rolPrincipal);
-    if (rolesArray.length > 0) {
-      localStorage.setItem('roles', JSON.stringify(rolesArray));
-    }
+    let rolPrincipal = res?.rol || res?.Rol || (rolesArray.length > 0 ? rolesArray[0] : 'Estudiante');
 
     const username = res?.username || res?.Username || fallbackUsername || 'usuario';
     const estudianteId = res?.estudianteId ?? res?.EstudianteId;
@@ -89,6 +85,57 @@ export class AuthService {
     const nombre = res?.nombre || res?.Nombre || '';
     const apellido = res?.apellido || res?.Apellido || '';
     const correo = res?.correo || res?.Correo || res?.email || res?.Email || (fallbackUsername && fallbackUsername.includes('@') ? fallbackUsername : `${fallbackUsername || username}@uteq.edu.ec`);
+
+    const usernameClean = (username || '').toLowerCase().trim();
+    const emailClean = (correo || '').toLowerCase().trim();
+    const rawClean = (fallbackUsername || '').toLowerCase().trim();
+
+    // Detección exhaustiva de rol Ayudante de Cátedra
+    let esAyudante = (rolPrincipal && rolPrincipal.toLowerCase().includes('ayudante')) ||
+      rolesArray.some(r => r && r.toLowerCase().includes('ayudante')) ||
+      usernameClean.includes('ayudante') ||
+      emailClean.includes('ayudante') ||
+      rawClean.includes('ayudante');
+
+    if (!esAyudante) {
+      try {
+        const regAyudantes: any[] = JSON.parse(localStorage.getItem('sigac_ayudantes_registrados') || '[]');
+        esAyudante = regAyudantes.some((a: any) =>
+          (a.username && a.username.toLowerCase() === usernameClean) ||
+          (a.correo && a.correo.toLowerCase() === emailClean) ||
+          (a.email && a.email.toLowerCase() === emailClean) ||
+          (id && (Number(a.id) === Number(id) || Number(a.estudianteId) === Number(id)))
+        );
+      } catch {}
+    }
+
+    if (!esAyudante) {
+      try {
+        const convs = JSON.parse(localStorage.getItem('sigac_convocatorias_solicitudes_v2') || '{}');
+        const lista: any[] = Object.values(convs);
+        esAyudante = lista.some((c: any) =>
+          (c.correoEstudiante && c.correoEstudiante.toLowerCase() === emailClean) ||
+          (id && Number(c.estudianteId) === Number(id)) ||
+          (c.nombreEstudiante && usernameClean && c.nombreEstudiante.toLowerCase().includes(usernameClean))
+        );
+      } catch {}
+    }
+
+    if (esAyudante && rolPrincipal !== 'Administrador' && rolPrincipal !== 'Decano' && rolPrincipal !== 'Coordinador' && rolPrincipal !== 'Docente') {
+      rolPrincipal = 'Ayudante';
+      if (!rolesArray.includes('Ayudante')) {
+        rolesArray.unshift('Ayudante');
+      }
+      if (!rolesArray.includes('Estudiante')) {
+        rolesArray.push('Estudiante');
+      }
+      localStorage.setItem('isAyudante', 'true');
+    }
+
+    localStorage.setItem('rol', rolPrincipal);
+    if (rolesArray.length > 0) {
+      localStorage.setItem('roles', JSON.stringify(rolesArray));
+    }
 
     localStorage.setItem('username', username);
     if (id !== undefined && id !== null) {
@@ -212,59 +259,24 @@ export class AuthService {
     localStorage.removeItem('nombre');
     localStorage.removeItem('apellido');
     localStorage.removeItem('correo');
+    localStorage.removeItem('isAyudante');
 
-    const llavesSesion = [
-      'sigac_convocatorias_pendientes',
-      'sigac_convocatorias_publicadas',
-      'sigac_ayudantias_publicadas',
-      'sigac_postulaciones_v2',
-      'sigac_bitacoras_v2'
-    ];
-    llavesSesion.forEach(k => localStorage.removeItem(k));
-
-    // No eliminamos las clases/materias creadas ni los docentes persistidos del sistema,
-    // porque esas son entidades de dominio y deben seguir visibles tras logout/re-login.
-    this.limpiarDatosResidualesSesion();
+    // No eliminamos las entidades de dominio (convocatorias, postulaciones,
+    // ayudantes creados, materias, temas, etc.), para que persistan entre sesiones de usuario.
   }
 
   /**
-   * Limpia el localStorage de datos residuales o mocks de sesiones anteriores
+   * Limpia únicamente llaves temporales de sesión, preservando datos de dominio
    */
   limpiarDatosResidualesSesion(): void {
     if (typeof window === 'undefined') return;
-    const llavesResiduales = [
-      'sigac_estudiante_materias_real',
-      'sigac_recursos_v2',
-      'sigac_actividades_v2',
-      'sigac_asistencias_v2',
-      'sigac_temas_v2',
-      'sigac_sesiones_v2',
-      'sigac_planificaciones_v2',
-      'sigac_ocupaciones_v2',
-      'sigac_postulaciones_v2',
-      'sigac_bitacoras_v2'
+    const llavesEfimeras = [
+      'sigac_token_temp',
+      'sigac_sesion_temp'
     ];
-
-    llavesResiduales.forEach(k => {
+    llavesEfimeras.forEach(k => {
       try { localStorage.removeItem(k); } catch {}
     });
-
-    try {
-      const keysToRemove: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && (
-          key.startsWith('sigac_') ||
-          key.startsWith('materias_') ||
-          key.startsWith('recursos_') ||
-          key.startsWith('actividades_') ||
-          key.startsWith('asistencias_')
-        )) {
-          keysToRemove.push(key);
-        }
-      }
-      keysToRemove.forEach(k => localStorage.removeItem(k));
-    } catch {}
   }
 
   private decodeJwtPayload(token: string): any | null {
@@ -323,21 +335,103 @@ export class AuthService {
   }
 
   getRol(): string | null {
+    if (this.esUsuarioAyudante()) {
+      const storedRol = localStorage.getItem('rol');
+      if (!storedRol || storedRol === 'Estudiante' || storedRol === 'Usuario') {
+        return 'Ayudante';
+      }
+    }
     return localStorage.getItem('rol');
   }
 
   getRole(): string | null {
-   const directRole = this.getRol();
-   if (directRole) return directRole;
-   const storedRoles = localStorage.getItem('roles');
-   if (!storedRoles) return null;
-   try {
-     const parsed = JSON.parse(storedRoles);
-     if (Array.isArray(parsed) && parsed.length > 0) {
-       return String(parsed[0]).trim();
-     }
-   } catch {}
-   return storedRoles.split(/[;,|]/)[0]?.trim() || null;
+    if (this.esUsuarioAyudante()) {
+      const storedRol = localStorage.getItem('rol');
+      if (!storedRol || storedRol === 'Estudiante' || storedRol === 'Usuario') {
+        return 'Ayudante';
+      }
+    }
+    const directRole = this.getRol();
+    if (directRole) return directRole;
+    const storedRoles = localStorage.getItem('roles');
+    if (!storedRoles) return null;
+    try {
+      const parsed = JSON.parse(storedRoles);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return String(parsed[0]).trim();
+      }
+    } catch {}
+    return storedRoles.split(/[;,|]/)[0]?.trim() || null;
+  }
+
+  /**
+   * Comprueba si el usuario en sesión es o fue registrado como Ayudante de Cátedra
+   */
+  esUsuarioAyudante(): boolean {
+    if (typeof window === 'undefined') return false;
+    if (localStorage.getItem('isAyudante') === 'true') return true;
+    const directRol = (localStorage.getItem('rol') || '').toLowerCase();
+    if (directRol.includes('ayudante')) return true;
+
+    const username = (localStorage.getItem('username') || '').toLowerCase().trim();
+    const correo = (localStorage.getItem('correo') || '').toLowerCase().trim();
+    const userId = Number(localStorage.getItem('userId') || localStorage.getItem('estudianteId') || 0);
+
+    if (!username && !correo && !userId) return false;
+
+    if (username.includes('ayudante') || correo.includes('ayudante')) {
+      return true;
+    }
+
+    try {
+      const regAyudantes: any[] = JSON.parse(localStorage.getItem('sigac_ayudantes_registrados') || '[]');
+      const match = regAyudantes.some((a: any) =>
+        (a.username && a.username.toLowerCase() === username) ||
+        (a.correo && a.correo.toLowerCase() === correo) ||
+        (a.email && a.email.toLowerCase() === correo) ||
+        (userId > 0 && (Number(a.id) === userId || Number(a.estudianteId) === userId))
+      );
+      if (match) return true;
+    } catch {}
+
+    try {
+      const convs = JSON.parse(localStorage.getItem('sigac_convocatorias_solicitudes_v2') || '{}');
+      const items: any[] = Object.values(convs);
+      const matchConv = items.some((c: any) =>
+        (c.correoEstudiante && c.correoEstudiante.toLowerCase() === correo) ||
+        (userId > 0 && Number(c.estudianteId) === userId) ||
+        (c.nombreEstudiante && username && c.nombreEstudiante.toLowerCase().includes(username))
+      );
+      if (matchConv) return true;
+    } catch {}
+
+    return false;
+  }
+
+  /**
+   * Sincroniza y promueve a 'Ayudante' en sesión si corresponde
+   */
+  verificarYActualizarRolAyudante(): boolean {
+    if (typeof window === 'undefined') return false;
+    const rolActual = localStorage.getItem('rol') || '';
+    if (rolActual === 'Administrador' || rolActual === 'Decano' || rolActual === 'Coordinador' || rolActual === 'Docente') {
+      return false;
+    }
+
+    if (this.esUsuarioAyudante()) {
+      localStorage.setItem('isAyudante', 'true');
+      localStorage.setItem('rol', 'Ayudante');
+      const roles = this.getRoles();
+      if (!roles.includes('Ayudante')) {
+        roles.unshift('Ayudante');
+      }
+      if (!roles.includes('Estudiante')) {
+        roles.push('Estudiante');
+      }
+      localStorage.setItem('roles', JSON.stringify(roles));
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -352,6 +446,11 @@ export class AuthService {
 
     if (!this.isTokenValid()) {
       return [];
+    }
+
+    // Si es ayudante registrado, asegurar que esté en rolesSet
+    if (this.esUsuarioAyudante()) {
+      rolesSet.add('Ayudante');
     }
 
     // 1. Intentar decodificar claims del token JWT
@@ -427,6 +526,9 @@ export class AuthService {
   hasRole(role: string): boolean {
     if (!role) return false;
     const target = role.trim().toLowerCase();
+    if (target.includes('ayudante') && this.esUsuarioAyudante()) {
+      return true;
+    }
     const roles = this.getRoles();
     return roles.some(r => {
       const normalized = String(r || '').trim().toLowerCase();

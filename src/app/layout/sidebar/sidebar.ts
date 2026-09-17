@@ -26,6 +26,7 @@ export class SidebarComponent implements OnInit {
   }
 
   cargarDatosUsuario(): void {
+    this.authService.verificarYActualizarRolAyudante();
     const user = this.authService.currentUser;
     if (user) {
       this.username = user.username || 'Usuario';
@@ -45,6 +46,8 @@ export class SidebarComponent implements OnInit {
   }
 
   esAyudanteRol(): boolean {
+    if (localStorage.getItem('isAyudante') === 'true') return true;
+    if (this.authService.esUsuarioAyudante()) return true;
     const current = this.normalizeRol(this.authService.getRole() || this.authService.currentUser?.rol || this.rolPrincipal);
     return current.includes('ayudante') || this.hasRole('Ayudante') || this.hasRole('AYUDANTE') || this.normalizeRol(this.rolPrincipal).includes('ayudante');
   }

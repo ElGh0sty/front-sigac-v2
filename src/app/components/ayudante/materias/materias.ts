@@ -250,27 +250,57 @@ export class AyudanteMateriasComponent implements OnInit, OnDestroy {
 
   private sincronizarMateriaAprobadaDesdePublicacion(): void {
     const rol = localStorage.getItem('rol');
-    if (rol !== 'Ayudante' && !this.authService.hasRole('Ayudante')) {
+    const isAyud = rol === 'Ayudante' || this.authService.hasRole('Ayudante') || this.authService.esUsuarioAyudante() || localStorage.getItem('isAyudante') === 'true';
+    if (!isAyud) {
       return;
     }
 
     try {
-      const publicadas = JSON.parse(localStorage.getItem('sigac_convocatorias_publicadas') || '[]');
-      const materiaAprobada = publicadas[0];
+      const username = (localStorage.getItem('username') || '').toLowerCase().trim();
+      const correo = (localStorage.getItem('correo') || '').toLowerCase().trim();
+      const cedula = (localStorage.getItem('cedula') || '').trim();
+
+      // Buscar si el usuario actual fue registrado como ayudante asignado
+      let materiaAprobada: any = null;
+      try {
+        const listaAyudantes = JSON.parse(localStorage.getItem('sigac_ayudantes_registrados') || '[]');
+        const ayRecord = listaAyudantes.find((a: any) =>
+          (a.username && a.username.toLowerCase() === username) ||
+          (a.correo && a.correo.toLowerCase() === correo) ||
+          (a.cedula && a.cedula === cedula)
+        );
+        if (ayRecord && ayRecord.materiaNombre) {
+          materiaAprobada = {
+            catedraId: ayRecord.materiaId,
+            materiaId: ayRecord.materiaId,
+            nombreCatedra: ayRecord.materiaNombre
+          };
+        }
+      } catch {}
+
+      if (!materiaAprobada) {
+        const publicadas = JSON.parse(localStorage.getItem('sigac_convocatorias_publicadas') || '[]');
+        materiaAprobada = publicadas.find((pub: any) =>
+          (pub.correoAyudante && pub.correoAyudante.toLowerCase() === correo) ||
+          (pub.ayudanteAsignado && pub.ayudanteAsignado.toLowerCase().includes(username))
+        ) || publicadas[0];
+      }
+
       if (!materiaAprobada || !materiaAprobada.nombreCatedra) {
         return;
       }
 
-      const existe = this.materias.some(m => Number(m.id) === Number(materiaAprobada.catedraId || materiaAprobada.materiaId || 101));
+      const matId = Number(materiaAprobada.catedraId || materiaAprobada.materiaId || 101);
+      const existe = this.materias.some(m => Number(m.id) === matId);
       if (!existe) {
         const nuevaMateria: MateriaDto = {
-          id: Number(materiaAprobada.catedraId || materiaAprobada.materiaId || 101),
+          id: matId,
           nombre: materiaAprobada.nombreCatedra,
-          codigo: `AY-${Date.now().toString().slice(-4)}`,
+          codigo: `AY-${matId}`,
           docente: 'Docente Titular',
           semestre: '2026-2',
           descripcion: 'Materia aprobada oficialmente para ayudantía de cátedra.',
-          ayudantes: ['Ayudante de Cátedra']
+          ayudantes: [this.authService.currentUser?.nombre || 'Ayudante de Cátedra']
         };
         this.materias = [nuevaMateria, ...this.materias];
         this.materiaSeleccionadaId = nuevaMateria.id;

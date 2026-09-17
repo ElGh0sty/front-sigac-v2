@@ -41,6 +41,7 @@ export class LayoutComponent implements OnInit {
   probandoConexion: boolean = false;
 
   ngOnInit() {
+    this.authService.verificarYActualizarRolAyudante();
     this.rol = this.authService.getRole() || this.authService.currentUser?.rol || this.authService.currentUser?.role || localStorage.getItem('rol') || 'Estudiante';
     this.actualizarEstadoAyudante();
     this.actualizarBackend();
@@ -60,6 +61,8 @@ export class LayoutComponent implements OnInit {
   }
 
   get isAyudante(): boolean {
+    if (localStorage.getItem('isAyudante') === 'true') return true;
+    if (this.authService.esUsuarioAyudante()) return true;
     const r = this.normalizeRol(
       this.authService.getRole() ||
         this.authService.currentUser?.rol ||
@@ -117,6 +120,8 @@ export class LayoutComponent implements OnInit {
 
     if (sec === 'ayudante') {
       return (
+        localStorage.getItem('isAyudante') === 'true' ||
+        this.authService.esUsuarioAyudante() ||
         rolActual.includes('ayudante') ||
         this.authService.hasRole('Ayudante') ||
         this.authService.hasRole('AYUDANTE')

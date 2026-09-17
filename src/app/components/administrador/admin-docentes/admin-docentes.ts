@@ -66,6 +66,7 @@ export class AdminDocentesComponent implements OnInit {
     if (r === 'decano') return 'Decano';
     if (r === 'coordinador') return 'Coordinador';
     if (r === 'docente') return 'Docente';
+    if (r === 'ayudante') return 'Ayudante';
     if (r === 'estudiante') return 'Estudiante';
     return null;
   }

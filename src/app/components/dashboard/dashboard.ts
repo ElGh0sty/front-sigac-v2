@@ -1,9 +1,10 @@
-import { Component, OnInit, AfterViewInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, AfterViewInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { MateriaService } from '../../services/materia.service';
+import { AuthService } from '../../services/auth.service';
 
 declare const Plotly: any;
 
@@ -15,6 +16,7 @@ declare const Plotly: any;
   styleUrls: ['./dashboard.css']
 })
 export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
+  private authService = inject(AuthService);
   rol = localStorage.getItem('rol') || 'Estudiante';
   esAyudante = localStorage.getItem('rol') === 'Ayudante';
   private sub?: Subscription;
@@ -50,7 +52,11 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    if (this.rol === 'Estudiante' || this.rol === 'Docente' || this.rol === 'Ayudante') {
+    this.authService.verificarYActualizarRolAyudante();
+    this.rol = localStorage.getItem('rol') || 'Estudiante';
+    this.esAyudante = this.rol === 'Ayudante' || this.authService.esUsuarioAyudante();
+
+    if (this.rol === 'Estudiante' || this.rol === 'Docente' || this.rol === 'Ayudante' || this.esAyudante) {
       this.materiaService.refreshMaterias().subscribe();
     }
 
@@ -60,7 +66,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
       const correoUsuario = (localStorage.getItem('correo') || '').toLowerCase().trim();
       const userId = Number(localStorage.getItem('userId')) || 1;
 
-      if (this.rol === 'Docente' || this.rol === 'Ayudante') {
+      if (this.rol === 'Docente' || this.rol === 'Ayudante' || this.esAyudante) {
         const clasesDelUsuario = list.map((m, idx) => {
           const totalEstudiantes = Array.isArray(m.estudiantes) ? m.estudiantes.length : 0;
           const asistenciaPromedio = totalEstudiantes > 0
@@ -70,7 +76,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
           return {
             titulo: `${m.nombre}${m.codigo ? ` · ${m.codigo}` : ''}`,
             descripcion: `${m.docente || 'Docente Titular'} · ${m.semestre || '2026-2'} · ${m.grupo || 'Grupo A'} · ${totalEstudiantes} estudiantes · ${Math.round(asistenciaPromedio)}% asistencia`,
-            ruta: '/docente/gestion-clases'
+            ruta: (this.rol === 'Ayudante' || this.esAyudante) ? '/ayudante/materias' : '/docente/gestion-clases'
           };
         });
 
@@ -86,7 +92,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
             }, 0) / list.length)
           : 0;
         this.dashboardAyudante.proximasClases = clasesDelUsuario.length > 0 ? clasesDelUsuario.slice(0, 4) : [
-          { titulo: 'Sin clases programadas', descripcion: 'No hay materias registradas para este usuario en el sistema.', ruta: '/docente/gestion-clases' }
+          { titulo: 'Sin clases programadas', descripcion: 'No hay materias registradas para este usuario en el sistema.', ruta: (this.rol === 'Ayudante' || this.esAyudante) ? '/ayudante/materias' : '/docente/gestion-clases' }
         ];
       }
 

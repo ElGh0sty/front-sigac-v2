@@ -13,6 +13,7 @@ import { DocumentosDescargaService, DocumentoReporteDatos } from '../../../servi
 import { AdminDocenteService, DocenteItemDto } from '../../../services/admin-docente.service';
 import { MateriaService, MateriaDto } from '../../../services/materia.service';
 import { AuthService } from '../../../services/auth.service';
+import { RolesService } from '../../../services/roles.service';
 import { EmailNotificationService } from '../../../services/email-notification.service';
 import { getApiBase } from '../../../api';
 
@@ -30,6 +31,7 @@ export class AyudantiasDashboardComponent implements OnInit, OnDestroy {
   private adminDocenteService = inject(AdminDocenteService);
   private materiaService = inject(MateriaService);
   private authService = inject(AuthService);
+  private rolesService = inject(RolesService);
   private emailNotificationService = inject(EmailNotificationService);
   private http = inject(HttpClient);
   private router = inject(Router);
@@ -439,14 +441,14 @@ export class AyudantiasDashboardComponent implements OnInit, OnDestroy {
       creditosAprobados: 120,
       creditosTotales: 180,
       rol: 'Ayudante',
-      roles: ['Estudiante', 'Ayudante']
+      roles: ['Ayudante', 'Estudiante']
     };
 
     const apiBase = getApiBase();
 
-    // Registrar el usuario en la BD de Supabase a través de Login/register o Usuarios
-    const registrarEstudiante$ = this.http.post<any>(`${apiBase}/api/Login/register`, payloadEstudiante).pipe(
-      catchError(() => this.http.post<any>(`${apiBase}/api/Usuarios`, payloadEstudiante)),
+    // Registrar el usuario en la BD de Supabase: intentar primero endpoint de Usuarios que asigna roles directamente, con fallback a Login/register
+    const registrarEstudiante$ = this.http.post<any>(`${apiBase}/api/Usuarios`, payloadEstudiante).pipe(
+      catchError(() => this.http.post<any>(`${apiBase}/api/Login/register`, payloadEstudiante)),
       catchError((err) => {
         console.warn('Aviso de registro de estudiante (continuando con postulación directa):', err);
         return of(null);
@@ -456,6 +458,52 @@ export class AyudantiasDashboardComponent implements OnInit, OnDestroy {
     registrarEstudiante$.subscribe({
       next: (estRes) => {
         const estudianteId = Number(estRes?.id || estRes?.estudianteId || estRes?.Id || estRes?.data?.id || 0);
+
+        // Si se obtuvo ID del usuario, asegurar la asignación oficial del rol Ayudante en el backend
+        if (estudianteId > 0) {
+          this.rolesService.actualizarRoles(estudianteId, ['Ayudante', 'Estudiante']).pipe(
+            catchError(() => this.rolesService.asignarRol(estudianteId, 'Ayudante')),
+            catchError(() => of(null))
+          ).subscribe();
+        }
+
+        const materiaObj = this.materias.find(m => Number(m.id) === Number(p.materiaId));
+        const materiaNombre = materiaObj ? `${materiaObj.nombre} (${materiaObj.codigo || ''})` : 'Cátedra Institucional';
+
+        // Persistir de forma garantizada en el registro institucional de Ayudantes
+        try {
+          const listaAyudantes: any[] = JSON.parse(localStorage.getItem('sigac_ayudantes_registrados') || '[]');
+          const itemExistenteIdx = listaAyudantes.findIndex((a: any) =>
+            (a.username && a.username.toLowerCase() === username.toLowerCase()) ||
+            (a.correo && a.correo.toLowerCase() === correo.toLowerCase()) ||
+            (a.cedula && a.cedula === cedula)
+          );
+          const dataAyudante = {
+            id: estudianteId || Date.now(),
+            estudianteId: estudianteId || Date.now(),
+            username: username.toLowerCase().trim(),
+            correo: correo.toLowerCase().trim(),
+            email: correo.toLowerCase().trim(),
+            cedula: cedula.trim(),
+            nombreCompleto: nombresFull,
+            nombre: nombre,
+            apellido: apellido,
+            materiaId: Number(p.materiaId),
+            materiaNombre: materiaNombre,
+            rol: 'Ayudante',
+            roles: ['Ayudante', 'Estudiante'],
+            activo: true,
+            fechaCreacion: new Date().toISOString()
+          };
+          if (itemExistenteIdx >= 0) {
+            listaAyudantes[itemExistenteIdx] = { ...listaAyudantes[itemExistenteIdx], ...dataAyudante };
+          } else {
+            listaAyudantes.push(dataAyudante);
+          }
+          localStorage.setItem('sigac_ayudantes_registrados', JSON.stringify(listaAyudantes));
+        } catch (e) {
+          console.warn('Error guardando en sigac_ayudantes_registrados', e);
+        }
 
         const payloadAyudantia: any = {
           // Identificadores
@@ -501,19 +549,52 @@ export class AyudantiasDashboardComponent implements OnInit, OnDestroy {
           MotivoPostulacion: 'Postulación y Registro de Ayudante de Cátedra',
           temaSilaboPropuesto: 'Sustentación y Apoyo a la Cátedra',
           TemaSilaboPropuesto: 'Sustentación y Apoyo a la Cátedra',
-          estado: 'Pendiente',
-          estadoAyudantia: 'Pendiente',
-          Estado: 'Pendiente',
+          rol: 'Ayudante',
+          estado: 'Aprobada',
+          estadoAyudantia: 'Aprobada',
+          Estado: 'Aprobada',
           fecha: new Date().toISOString()
         };
+
+        // Guardar también en el almacenamiento local de convocatorias para disponibilidad offline inmediata
+        this.coordinadorService.guardarConvocatoriaLocal(estudianteId || Date.now(), {
+          ayudantiaId: estudianteId || Date.now(),
+          estudianteId: estudianteId || Date.now(),
+          nombreEstudiante: nombresFull,
+          correoEstudiante: correo,
+          cedulaEstudiante: cedula,
+          catedraId: Number(p.materiaId),
+          nombreCatedra: materiaNombre,
+          estado: 'Aprobada',
+          estadoAyudantia: 'Aprobada',
+          rol: 'Ayudante',
+          fecha: new Date().toISOString()
+        });
+
+        // Registrar en convocatorias publicadas para asegurar que aparezca en el panel de materias del ayudante
+        try {
+          const publicadas: any[] = JSON.parse(localStorage.getItem('sigac_convocatorias_publicadas') || '[]');
+          const existePub = publicadas.some((pub: any) => Number(pub.catedraId || pub.materiaId) === Number(p.materiaId));
+          if (!existePub) {
+            publicadas.unshift({
+              id: Number(p.materiaId),
+              catedraId: Number(p.materiaId),
+              materiaId: Number(p.materiaId),
+              nombreCatedra: materiaNombre,
+              docenteTitular: 'Docente Titular',
+              semestre: '2026-2',
+              requisitoPromedio: Number(p.promedioGeneral || 8.5),
+              cuposDisponibles: 1,
+              ayudanteAsignado: nombresFull,
+              correoAyudante: correo
+            });
+            localStorage.setItem('sigac_convocatorias_publicadas', JSON.stringify(publicadas));
+          }
+        } catch {}
 
         this.coordinadorService.crearSolicitudAyudantia(payloadAyudantia).subscribe({
           next: (res) => {
             console.log('Postulación creada con éxito en la BD:', res);
-            
-            // Determinar nombre de la cátedra para el correo
-            const materiaObj = this.materias.find(m => Number(m.id) === Number(p.materiaId));
-            const materiaNombre = materiaObj ? `${materiaObj.nombre} (${materiaObj.codigo || ''})` : 'Cátedra Institucional';
             
             // DESPACHO DEL CORREO INSTITUCIONAL CON USUARIO Y CONTRASEÑA
             this.emailNotificationService.enviarCredenciales({
@@ -538,7 +619,7 @@ export class AyudantiasDashboardComponent implements OnInit, OnDestroy {
               title: '¡Cuenta y Postulación de Ayudante Creada!',
               html: `
                 <div class="text-left space-y-2 text-xs">
-                  <p class="text-slate-700">La cuenta institucional de <b>${nombresFull}</b> ha sido registrada con éxito en el sistema.</p>
+                  <p class="text-slate-700">La cuenta institucional de <b>${nombresFull}</b> ha sido registrada con éxito con el rol <b>Ayudante de Cátedra</b>.</p>
                   <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-emerald-950 mt-2">
                     <div class="font-bold text-xs flex items-center gap-1.5 mb-2 text-emerald-800">
                       <i class="fa-solid fa-paper-plane text-emerald-600"></i>
@@ -548,7 +629,8 @@ export class AyudantiasDashboardComponent implements OnInit, OnDestroy {
                       <div><b>Buzón Institucional:</b> <span class="text-slate-800 font-medium">${correo}</span></div>
                       <div><b>Usuario:</b> <code class="bg-white px-2 py-0.5 rounded border border-emerald-200 font-mono text-emerald-800 font-bold">${username}</code></div>
                       <div><b>Contraseña Temporal:</b> <code class="bg-white px-2 py-0.5 rounded border border-emerald-200 font-mono text-emerald-800 font-bold">${payloadEstudiante.password}</code></div>
-                      <div><b>Cátedra a Postular:</b> <span class="text-slate-700 font-medium">${materiaNombre}</span></div>
+                      <div><b>Rol Asignado:</b> <span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">Ayudante</span></div>
+                      <div><b>Cátedra Asignada:</b> <span class="text-slate-700 font-medium">${materiaNombre}</span></div>
                     </div>
                   </div>
                   <p class="text-slate-500 text-[11px] mt-2 italic flex items-center gap-1">
